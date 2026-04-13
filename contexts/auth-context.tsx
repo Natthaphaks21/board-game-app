@@ -5,7 +5,6 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react"
@@ -115,11 +114,18 @@ function writeEntitlements(authId: string, entitlements: EntitlementState) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => createClient(), [])
+  const [supabase, setSupabase] = useState<ReturnType<
+    typeof createClient
+  > | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const refreshUser = useCallback(async (): Promise<User | null> => {
+    if (!supabase) {
+      setIsLoading(false)
+      return null
+    }
+
     setIsLoading(true)
 
     const {
@@ -192,6 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithEmail = useCallback(
     async (email: string, password: string) => {
+      if (!supabase) {
+        throw new Error("Supabase client is not ready.")
+      }
+
       setIsLoading(true)
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
@@ -211,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signInWithGoogle = useCallback(async () => {
-    if (typeof window === "undefined") return
+    if (typeof window === "undefined" || !supabase) return
     const redirectTo = `${window.location.origin}/auth/callback`
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -224,6 +234,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase])
 
   const logout = useCallback(async () => {
+    if (!supabase) {
+      setUser(null)
+      return
+    }
+
     await supabase.auth.signOut()
     setUser(null)
   }, [supabase])
@@ -340,6 +355,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (typeof window === "undefined") return
+
+    try {
+      setSupabase(createClient())
+    } catch {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+
     refreshUser().catch(() => {
       setUser(null)
       setIsLoading(false)
