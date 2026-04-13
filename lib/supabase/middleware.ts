@@ -80,16 +80,25 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Check whether user already has completed app profile.
-  let isProfileComplete = false
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("uid")
-    .eq("auth_id", user.id)
-    .maybeSingle()
+  // Fast path via user metadata to avoid DB query on every request.
+  let isProfileComplete = Boolean(user.user_metadata?.profile_completed)
 
-  if (!profileError || profileError.code === "PGRST116") {
-    isProfileComplete = Boolean(profile?.uid)
+  // Only fallback to DB check on routes that require profile status decisions.
+  const needsProfileDecision =
+    pathname === "/" ||
+    pathname.startsWith("/onboarding") ||
+    isProtectedRoute
+
+  if (!isProfileComplete && needsProfileDecision) {
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("uid")
+      .eq("auth_id", user.id)
+      .maybeSingle()
+
+    if (!profileError || profileError.code === "PGRST116") {
+      isProfileComplete = Boolean(profile?.uid)
+    }
   }
 
   if (!isProfileComplete && !pathname.startsWith("/onboarding") && !pathname.startsWith("/auth")) {

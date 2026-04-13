@@ -127,6 +127,17 @@ export async function POST(request: Request) {
     )
   }
 
+  // Mark profile completion in auth metadata to avoid expensive DB checks
+  // on every request in middleware.
+  await supabase.auth.updateUser({
+    data: {
+      profile_completed: true,
+      username,
+      given_name: name,
+      family_name: surname,
+    },
+  })
+
   return NextResponse.json({
     success: true,
     profile,
