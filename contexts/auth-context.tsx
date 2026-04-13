@@ -221,16 +221,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signInWithGoogle = useCallback(async () => {
-    if (typeof window === "undefined" || !supabase) return
-    const redirectTo = `${window.location.origin}/auth/callback`
-    const { error } = await supabase.auth.signInWithOAuth({
+    if (typeof window === "undefined") {
+      throw new Error("Google sign-in must run in a browser.")
+    }
+
+    if (!supabase) {
+      throw new Error(
+        "Supabase auth is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel."
+      )
+    }
+
+    const configuredRedirect = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL?.trim()
+    const redirectTo =
+      configuredRedirect && configuredRedirect.startsWith("http")
+        ? configuredRedirect
+        : `${window.location.origin}/auth/callback`
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+        queryParams: { prompt: "select_account" },
+      },
     })
 
     if (error) {
       throw new Error(error.message)
     }
+
+    if (!data.url) {
+      throw new Error("Unable to start Google OAuth flow.")
+    }
+
+    window.location.assign(data.url)
   }, [supabase])
 
   const logout = useCallback(async () => {

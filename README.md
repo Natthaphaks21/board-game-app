@@ -22,6 +22,7 @@ Set these in `.env.local` and in Vercel Project Settings > Environment Variables
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `GOOGLE_MAPS_API_KEY`
 - `THAI_ID_HASH_SALT`
+- `NEXT_PUBLIC_AUTH_REDIRECT_URL` (optional, set to your exact Vercel callback URL)
 
 ## 3) Supabase setup
 
@@ -55,6 +56,5 @@ git push -u origin main
 1. Go to Vercel > Add New Project
 2. Import your GitHub repository
 3. Framework preset: Next.js
-4. Add the 4 environment variables
+4. Add the environment variables above
 5. Deploy
-

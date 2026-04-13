@@ -34,6 +34,7 @@ export default function LoginPage() {
       await signInWithGoogle()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Google login failed. Please try again.')
+    } finally {
       setIsGoogleLoading(false)
     }
   }
