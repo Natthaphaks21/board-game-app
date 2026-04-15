@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,40 +8,71 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { MainNav } from '@/components/navigation/main-nav'
 import { useAuth } from '@/contexts/auth-context'
-import { 
-  Gamepad2, 
-  Package, 
-  Calendar, 
-  Clock, 
+import {
+  Gamepad2,
+  Package,
+  Calendar,
+  Clock,
   ArrowRight,
   Plus,
   Minus,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const availableGames = [
-  { id: '1', name: 'Catan', category: 'Strategy', available: true },
-  { id: '2', name: 'Ticket to Ride', category: 'Family', available: true },
-  { id: '3', name: 'Codenames', category: 'Party', available: true },
-  { id: '4', name: 'Wingspan', category: 'Strategy', available: false },
-  { id: '5', name: 'Azul', category: 'Abstract', available: true },
-  { id: '6', name: 'Pandemic', category: 'Cooperative', available: true },
-]
-
 interface BorrowedGame {
-  id: string
+  itemId: string
   name: string
+  category: string
+  imageUrl: string | null
   borrowedDate: string
   dueDate: string
 }
 
+interface AvailableGame {
+  itemId: string
+  name: string
+  category: string
+  imageUrl: string | null
+  available: boolean
+}
+
+interface BorrowGamesPayload {
+  isMember: boolean
+  borrowedGames: BorrowedGame[]
+  availableGames: AvailableGame[]
+}
+
+function GameCover({ imageUrl, name }: { imageUrl: string | null; name: string }) {
+  if (!imageUrl) {
+    return (
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={name}
+      className="h-12 w-12 rounded-xl object-cover"
+      loading="lazy"
+    />
+  )
+}
+
 export default function GameSlotsPage() {
-  const { user, useSlot, returnSlot } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
-  const [borrowedGames, setBorrowedGames] = useState<BorrowedGame[]>([
-    { id: '1', name: 'Catan', borrowedDate: 'Mar 28, 2026', dueDate: 'Apr 28, 2026' },
-  ])
+
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isMemberRow, setIsMemberRow] = useState(true)
+  const [borrowedGames, setBorrowedGames] = useState<BorrowedGame[]>([])
+  const [availableGames, setAvailableGames] = useState<AvailableGame[]>([])
 
   useEffect(() => {
     if (!user) {
@@ -53,43 +84,106 @@ export default function GameSlotsPage() {
     }
   }, [user, router])
 
+  const loadBorrowData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/borrow-games', { cache: 'no-store' })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null
+        throw new Error(payload?.error ?? 'Unable to load borrowed games')
+      }
+
+      const payload = (await response.json()) as BorrowGamesPayload
+      setIsMemberRow(payload.isMember)
+      setBorrowedGames(payload.borrowedGames ?? [])
+      setAvailableGames(payload.availableGames ?? [])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to load games')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!user || user.subscription === 'free') return
+    void loadBorrowData()
+  }, [loadBorrowData, user])
+
   if (!user || user.subscription === 'free') return null
 
   const slotsUsed = borrowedGames.length
   const totalSlots = user.gameSlots
   const slotsAvailable = totalSlots - slotsUsed
-  const usagePercentage = (slotsUsed / totalSlots) * 100
+  const usagePercentage = totalSlots > 0 ? (slotsUsed / totalSlots) * 100 : 0
 
-  const handleBorrowGame = (gameId: string, gameName: string) => {
+  const borrowedNames = useMemo(
+    () => new Set(borrowedGames.map((game) => game.name)),
+    [borrowedGames]
+  )
+
+  const handleBorrowGame = async (itemId: string, gameName: string) => {
     if (slotsAvailable <= 0) {
       toast.error('No slots available. Return a game first.')
       return
     }
 
-    const newGame: BorrowedGame = {
-      id: gameId,
-      name: gameName,
-      borrowedDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    }
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/borrow-games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId }),
+      })
 
-    setBorrowedGames([...borrowedGames, newGame])
-    useSlot()
-    toast.success(`${gameName} has been borrowed!`)
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Unable to borrow game')
+      }
+
+      toast.success(`${gameName} has been borrowed!`)
+      await loadBorrowData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to borrow game')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleReturnGame = (gameId: string) => {
-    setBorrowedGames(borrowedGames.filter(g => g.id !== gameId))
-    returnSlot()
-    toast.success('Game returned successfully!')
+  const handleReturnGame = async (itemId: string) => {
+    setIsSubmitting(true)
+    try {
+      const response = await fetch(`/api/borrow-games/${itemId}/return`, {
+        method: 'POST',
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? 'Unable to return game')
+      }
+
+      toast.success('Game returned successfully!')
+      await loadBorrowData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to return game')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-background">
       <MainNav />
-      
+
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Game Slots</h1>
           <p className="mt-2 text-muted-foreground">
@@ -97,7 +191,6 @@ export default function GameSlotsPage() {
           </p>
         </div>
 
-        {/* Slots Overview */}
         <Card className="mb-8 border-2 border-primary/50 bg-primary/5">
           <CardContent className="p-6">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
@@ -124,131 +217,145 @@ export default function GameSlotsPage() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Currently Borrowed */}
+        {!isMemberRow ? (
+          <Card className="mb-8 border-2 border-destructive/50 bg-destructive/5">
+            <CardContent className="flex items-center gap-3 p-4">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <p className="text-sm">
+                Your account is not in `members` table yet. Please insert your `uid` into `members(vid)` in Supabase first.
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {isLoading ? (
           <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-accent" />
-                Currently Borrowed
-              </CardTitle>
-              <CardDescription>
-                Games you have checked out
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {borrowedGames.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                    <Package className="h-8 w-8 text-muted-foreground" />
+            <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Loading games...
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-2">
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-accent" />
+                  Currently Borrowed
+                </CardTitle>
+                <CardDescription>Games you have checked out</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {borrowedGames.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <Package className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">No games borrowed yet</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Browse available games to get started</p>
                   </div>
-                  <p className="text-muted-foreground">No games borrowed yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Browse available games to get started
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {borrowedGames.map((game) => (
-                    <div
-                      key={game.id}
-                      className="flex items-center justify-between rounded-xl border border-border p-4"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                          <Gamepad2 className="h-6 w-6 text-accent" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{game.name}</h3>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Borrowed: {game.borrowedDate}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              Due: {game.dueDate}
-                            </span>
+                ) : (
+                  <div className="space-y-4">
+                    {borrowedGames.map((game) => (
+                      <div
+                        key={game.itemId}
+                        className="flex flex-col gap-3 rounded-xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-center gap-4">
+                          <GameCover imageUrl={game.imageUrl} name={game.name} />
+                          <div>
+                            <h3 className="font-semibold">{game.name}</h3>
+                            <Badge variant="outline" className="mt-1 text-xs">{game.category}</Badge>
+                            <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:gap-3">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Borrowed: {game.borrowedDate}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Due: {game.dueDate}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleReturnGame(game.id)}
-                        className="gap-1"
-                      >
-                        <Minus className="h-4 w-4" />
-                        Return
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Available to Borrow */}
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gamepad2 className="h-5 w-5 text-primary" />
-                Available Games
-              </CardTitle>
-              <CardDescription>
-                Browse and borrow from our library
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {availableGames.map((game) => {
-                  const isBorrowed = borrowedGames.some(b => b.name === game.name)
-                  return (
-                    <div
-                      key={game.id}
-                      className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                          <Gamepad2 className="h-5 w-5 text-secondary-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{game.name}</p>
-                          <Badge variant="outline" className="mt-1 text-xs">
-                            {game.category}
-                          </Badge>
-                        </div>
-                      </div>
-                      {isBorrowed ? (
-                        <Badge variant="secondary">Borrowed</Badge>
-                      ) : !game.available ? (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Unavailable
-                        </Badge>
-                      ) : slotsAvailable <= 0 ? (
-                        <Button size="sm" variant="outline" disabled>
-                          No Slots
-                        </Button>
-                      ) : (
                         <Button
+                          variant="outline"
                           size="sm"
-                          onClick={() => handleBorrowGame(game.id, game.name)}
+                          onClick={() => handleReturnGame(game.itemId)}
                           className="gap-1"
+                          disabled={isSubmitting}
                         >
-                          <Plus className="h-4 w-4" />
-                          Borrow
+                          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Minus className="h-4 w-4" />}
+                          Return
                         </Button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Slot Info */}
-        {slotsAvailable === 0 && (
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gamepad2 className="h-5 w-5 text-primary" />
+                  Available Games
+                </CardTitle>
+                <CardDescription>Browse and borrow from our library</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {availableGames.map((game) => {
+                    const isBorrowed = borrowedNames.has(game.name)
+
+                    return (
+                      <div
+                        key={game.itemId}
+                        className="flex flex-col gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <GameCover imageUrl={game.imageUrl} name={game.name} />
+                          <div>
+                            <p className="font-medium">{game.name}</p>
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {game.category}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {isBorrowed ? (
+                          <Badge variant="secondary">Borrowed</Badge>
+                        ) : slotsAvailable <= 0 ? (
+                          <Button size="sm" variant="outline" disabled>
+                            No Slots
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => handleBorrowGame(game.itemId, game.name)}
+                            className="gap-1"
+                            disabled={isSubmitting || !isMemberRow}
+                          >
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                            Borrow
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {availableGames.length === 0 ? (
+                    <p className="rounded-lg border border-border p-4 text-center text-sm text-muted-foreground">
+                      No available physical game items in stock.
+                    </p>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {slotsAvailable === 0 ? (
           <Card className="mt-8 border-2 border-destructive/50 bg-destructive/5">
             <CardContent className="flex items-center gap-4 p-4">
               <AlertCircle className="h-8 w-8 text-destructive" />
@@ -264,7 +371,7 @@ export default function GameSlotsPage() {
               </Button>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </main>
     </div>
   )

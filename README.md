@@ -30,6 +30,15 @@ Run SQL in Supabase SQL Editor:
 
 1. `scripts/003_boardbuddies_supabase_schema.sql` (recommended full setup)
 2. Or if you already have old tables, run `scripts/002_auth_privacy_backend.sql`
+3. Then run `scripts/004_game_images_storage.sql` to add:
+   - game image metadata columns
+   - storage bucket + policies for cover images
+   - update policy for borrow/return flow
+
+Image storage best practice:
+- Upload image files to Supabase Storage bucket: `boardgame-covers`
+- Save only the file path in `board_game_catalogue.cover_image_path`
+  (example: `covers/catan.jpg`)
 
 ## 4) Supabase Auth settings
 
