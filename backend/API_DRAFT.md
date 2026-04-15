@@ -29,7 +29,7 @@ Main backend service helpers are in:
 ## Required env vars
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `GOOGLE_MAPS_API_KEY`
+- `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 - `THAI_ID_HASH_SALT`
 
 ## Login flow implemented

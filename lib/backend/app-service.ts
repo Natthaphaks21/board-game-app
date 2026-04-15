@@ -44,6 +44,21 @@ export interface PlaceCandidate {
   googleMapsUri?: string | null
 }
 
+function resolveGoogleMapsApiKey(): string {
+  const apiKey =
+    process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.MAPS_API_KEY ||
+    process.env.Maps_API_KEY
+
+  if (!apiKey) {
+    throw new Error(
+      "Google Maps API key is missing. Set GOOGLE_MAPS_API_KEY or Maps_API_KEY."
+    )
+  }
+
+  return apiKey
+}
+
 export function isThaiCitizenIdValid(id: string): boolean {
   if (!/^\d{13}$/.test(id)) return false
 
@@ -82,10 +97,7 @@ export function matchesVenueType(venueType: string | null, types: string[]): boo
 }
 
 export async function searchPublicPlaces(query: string, venueType?: string): Promise<PlaceSearchResult[]> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
-  if (!apiKey) {
-    throw new Error("GOOGLE_MAPS_API_KEY is missing")
-  }
+  const apiKey = resolveGoogleMapsApiKey()
 
   const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
     method: "POST",
@@ -168,10 +180,7 @@ export function normalizePlaceCandidate(place: PlaceCandidate): PlaceSearchResul
 }
 
 export async function getPlaceById(placeId: string): Promise<PlaceSearchResult | null> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
-  if (!apiKey) {
-    throw new Error("GOOGLE_MAPS_API_KEY is missing")
-  }
+  const apiKey = resolveGoogleMapsApiKey()
 
   const normalizedPlaceId = placeId.trim()
   if (!normalizedPlaceId) return null

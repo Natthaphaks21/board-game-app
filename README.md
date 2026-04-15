@@ -20,7 +20,7 @@ Set these in `.env.local` and in Vercel Project Settings > Environment Variables
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `GOOGLE_MAPS_API_KEY`
+- `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 - `THAI_ID_HASH_SALT`
 - `NEXT_PUBLIC_AUTH_REDIRECT_URL` (optional, set to your exact Vercel callback URL)
 
