@@ -34,15 +34,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const popularGames = [
-  { id: '1', name: 'Catan', minPlayers: 3, maxPlayers: 4 },
-  { id: '2', name: 'Ticket to Ride', minPlayers: 2, maxPlayers: 5 },
-  { id: '3', name: 'Codenames', minPlayers: 4, maxPlayers: 8 },
-  { id: '4', name: 'Wingspan', minPlayers: 1, maxPlayers: 5 },
-  { id: '5', name: 'Azul', minPlayers: 2, maxPlayers: 4 },
-  { id: '6', name: 'Pandemic', minPlayers: 2, maxPlayers: 4 },
-  { id: '7', name: 'Splendor', minPlayers: 2, maxPlayers: 4 },
-  { id: '8', name: 'Terraforming Mars', minPlayers: 1, maxPlayers: 5 },
+const fallbackGames = [
+  { id: 'fallback-1', name: 'Catan' },
+  { id: 'fallback-2', name: 'Ticket to Ride' },
+  { id: 'fallback-3', name: 'Codenames' },
+  { id: 'fallback-4', name: 'Wingspan' },
 ]
 
 const venueTypes = [
@@ -65,14 +61,21 @@ interface PlaceSuggestion {
   isPublicVenue: boolean
 }
 
+interface GameOption {
+  id: string
+  name: string
+}
+
 export default function CreatePartyPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false)
+  const [isLoadingGames, setIsLoadingGames] = useState(false)
   const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([])
   const [selectedPlace, setSelectedPlace] = useState<PlaceSuggestion | null>(null)
+  const [gamesCatalogue, setGamesCatalogue] = useState<GameOption[]>(fallbackGames)
   const [placeError, setPlaceError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
@@ -95,6 +98,34 @@ export default function CreatePartyPage() {
       return
     }
   }, [user, router])
+
+  useEffect(() => {
+    if (!user) return
+
+    const loadGames = async () => {
+      setIsLoadingGames(true)
+      try {
+        const response = await fetch('/api/games', { cache: 'no-store' })
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as { error?: string } | null
+          throw new Error(payload?.error || 'Unable to load game catalogue')
+        }
+
+        const payload = (await response.json()) as { games: GameOption[] }
+        const games = payload.games?.filter((game) => game.name.trim().length > 0) ?? []
+        if (games.length > 0) {
+          setGamesCatalogue(games)
+        }
+      } catch (error) {
+        toast.warning(error instanceof Error ? error.message : 'Using fallback games list')
+      } finally {
+        setIsLoadingGames(false)
+      }
+    }
+
+    void loadGames()
+  }, [user])
 
   useEffect(() => {
     if (step !== 2) return
@@ -174,7 +205,7 @@ export default function CreatePartyPage() {
     }))
   }
 
-  const filteredGames = popularGames.filter(game =>
+  const filteredGames = gamesCatalogue.filter(game =>
     game.name.toLowerCase().includes(formData.gameSearch.toLowerCase())
   )
 
@@ -199,7 +230,7 @@ export default function CreatePartyPage() {
     setIsSubmitting(true)
     try {
       const selectedGameNames = formData.selectedGames
-        .map((gameId) => popularGames.find((game) => game.id === gameId)?.name)
+        .map((gameId) => gamesCatalogue.find((game) => game.id === gameId)?.name)
         .filter((gameName): gameName is string => Boolean(gameName))
 
       const response = await fetch('/api/parties', {
@@ -580,7 +611,7 @@ export default function CreatePartyPage() {
                 {formData.selectedGames.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {formData.selectedGames.map((gameId) => {
-                      const game = popularGames.find(g => g.id === gameId)
+                      const game = gamesCatalogue.find(g => g.id === gameId)
                       return game ? (
                         <Badge
                           key={gameId}
@@ -600,6 +631,13 @@ export default function CreatePartyPage() {
                     })}
                   </div>
                 )}
+
+                {isLoadingGames ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading game catalogue...
+                  </div>
+                ) : null}
 
                 <div className="grid gap-3 md:grid-cols-2">
                   {filteredGames.map((game) => {
@@ -622,7 +660,7 @@ export default function CreatePartyPage() {
                           <div className="text-left">
                             <p className="font-medium">{game.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {game.minPlayers}-{game.maxPlayers} players
+                              From Supabase catalogue
                             </p>
                           </div>
                         </div>
@@ -633,6 +671,12 @@ export default function CreatePartyPage() {
                     )
                   })}
                 </div>
+
+                {!isLoadingGames && filteredGames.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No games found. Add rows to `board_game_catalogue` in Supabase.
+                  </p>
+                ) : null}
               </CardContent>
             </>
           )}

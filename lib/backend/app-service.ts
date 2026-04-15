@@ -47,12 +47,14 @@ export interface PlaceCandidate {
 function resolveGoogleMapsApiKey(): string {
   const apiKey =
     process.env.GOOGLE_MAPS_API_KEY ||
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
     process.env.MAPS_API_KEY ||
-    process.env.Maps_API_KEY
+    process.env.Maps_API_KEY ||
+    process.env.NEXT_PUBLIC_MAPS_API_KEY
 
   if (!apiKey) {
     throw new Error(
-      "Google Maps API key is missing. Set GOOGLE_MAPS_API_KEY or Maps_API_KEY."
+      "Google Maps API key is missing. Set GOOGLE_MAPS_API_KEY, Maps_API_KEY, or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY."
     )
   }
 

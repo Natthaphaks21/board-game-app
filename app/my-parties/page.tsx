@@ -1,20 +1,20 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { MainNav } from '@/components/navigation/main-nav'
-import { useAuth } from '@/contexts/auth-context'
-import { DiceIcon } from '@/components/icons/dice-icon'
-import { 
-  MapPin, 
-  Calendar, 
-  Users, 
+import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { MainNav } from "@/components/navigation/main-nav"
+import { useAuth } from "@/contexts/auth-context"
+import { DiceIcon } from "@/components/icons/dice-icon"
+import {
+  MapPin,
+  Calendar,
+  Users,
   Clock,
   CheckCircle2,
   XCircle,
@@ -23,118 +23,142 @@ import {
   Plus,
   Gamepad2,
   ExternalLink,
-  ArrowLeft
-} from 'lucide-react'
-import { toast } from 'sonner'
+  ArrowLeft,
+  Loader2,
+} from "lucide-react"
+import { toast } from "sonner"
+
+type PartyStatus = "upcoming" | "ongoing" | "completed"
+type JoinStatus = "pending" | "accepted" | "rejected" | "none"
 
 interface Party {
   id: string
   name: string
-  role: 'host' | 'player'
+  role: "host" | "player" | "guest"
   location: string
   date: string
   time: string
-  players: { name: string; avatar?: string; status: 'confirmed' | 'pending' }[]
+  players: number
   maxPlayers: number
   games: string[]
-  status: 'upcoming' | 'ongoing' | 'completed'
-  joinStatus: 'pending' | 'accepted' | 'rejected'
+  status: PartyStatus
+  joinStatus: JoinStatus
 }
 
 interface JoinRequest {
   id: string
   partyId: string
   partyName: string
-  user: { name: string; avatar?: string }
-  requestedAt: string
+  userId: number
+  user: {
+    name: string
+    username: string | null
+  }
+  requestedAt: string | null
 }
 
-const mockParties: Party[] = [
-  {
-    id: '1',
-    name: 'My Catan Night',
-    role: 'host',
-    location: 'Board Game Cafe',
-    date: 'Apr 5, 2026',
-    time: '7:00 PM',
-    players: [
-      { name: 'You', status: 'confirmed' },
-      { name: 'Jamie L.', status: 'confirmed' },
-      { name: 'Chris P.', status: 'pending' },
-    ],
-    maxPlayers: 4,
-    games: ['Catan'],
-    status: 'upcoming',
-    joinStatus: 'accepted',
-  },
-  {
-    id: '2',
-    name: 'Friday Night Catan',
-    role: 'player',
-    location: 'The Game Hub',
-    date: 'Apr 4, 2026',
-    time: '7:00 PM',
-    players: [
-      { name: 'Alex M.', status: 'confirmed' },
-      { name: 'You', status: 'confirmed' },
-    ],
-    maxPlayers: 4,
-    games: ['Catan'],
-    status: 'upcoming',
-    joinStatus: 'accepted',
-  },
-]
+interface Payload {
+  parties: Party[]
+  requests: JoinRequest[]
+}
 
-const mockRequests: JoinRequest[] = [
-  {
-    id: '1',
-    partyId: '1',
-    partyName: 'My Catan Night',
-    user: { name: 'Taylor S.' },
-    requestedAt: '5 minutes ago',
-  },
-  {
-    id: '2',
-    partyId: '1',
-    partyName: 'My Catan Night',
-    user: { name: 'Jordan K.' },
-    requestedAt: '12 minutes ago',
-  },
-]
+function relativeTime(input: string | null): string {
+  if (!input) return "just now"
+
+  const ts = new Date(input).getTime()
+  if (!Number.isFinite(ts)) return "just now"
+
+  const diffSec = Math.max(1, Math.floor((Date.now() - ts) / 1000))
+  if (diffSec < 60) return `${diffSec}s ago`
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
+  return `${Math.floor(diffSec / 86400)}d ago`
+}
 
 export default function MyPartiesPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [parties, setParties] = useState<Party[]>(mockParties)
-  const [requests, setRequests] = useState<JoinRequest[]>(mockRequests)
+
+  const [parties, setParties] = useState<Party[]>([])
+  const [requests, setRequests] = useState<JoinRequest[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!user) {
-      router.push('/')
+      router.push("/")
+      return
     }
-  }, [user, router])
+
+    const load = async () => {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/my-parties", { cache: "no-store" })
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => null)) as
+            | { error?: string }
+            | null
+          throw new Error(payload?.error ?? "Unable to load parties")
+        }
+
+        const payload = (await response.json()) as Payload
+        setParties(payload.parties ?? [])
+        setRequests(payload.requests ?? [])
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to load parties")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    void load()
+  }, [router, user])
+
+  const hostedParties = useMemo(
+    () => parties.filter((party) => party.role === "host"),
+    [parties]
+  )
+  const joinedParties = useMemo(
+    () => parties.filter((party) => party.role === "player"),
+    [parties]
+  )
+
+  const handleRequestAction = async (
+    requestItem: JoinRequest,
+    status: "accepted" | "rejected"
+  ) => {
+    try {
+      const response = await fetch(
+        `/api/parties/${requestItem.partyId}/requests/${requestItem.userId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      )
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to update request")
+      }
+
+      setRequests((prev) => prev.filter((request) => request.id !== requestItem.id))
+      toast.success(status === "accepted" ? "Player accepted" : "Request declined")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update request")
+    }
+  }
 
   if (!user) return null
-
-  const hostedParties = parties.filter(p => p.role === 'host')
-  const joinedParties = parties.filter(p => p.role === 'player')
-
-  const handleAcceptRequest = (requestId: string) => {
-    setRequests(requests.filter(r => r.id !== requestId))
-    toast.success('Player accepted!')
-  }
-
-  const handleRejectRequest = (requestId: string) => {
-    setRequests(requests.filter(r => r.id !== requestId))
-    toast.success('Request declined')
-  }
 
   return (
     <div className="min-h-screen bg-background">
       <MainNav />
-      
+
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {/* Back Button */}
         <Button variant="ghost" asChild className="mb-6">
           <Link href="/home">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -142,21 +166,17 @@ export default function MyPartiesPage() {
           </Link>
         </Button>
 
-        {/* Header */}
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">My Parties</h1>
-            <p className="mt-2 text-muted-foreground">
-              Manage your upcoming game nights
-            </p>
+            <p className="mt-2 text-muted-foreground">Live parties loaded from Supabase</p>
           </div>
-          <Button onClick={() => router.push('/parties/create')} className="gap-2">
+          <Button onClick={() => router.push("/parties/create")} className="gap-2">
             <Plus className="h-4 w-4" />
             Create Party
           </Button>
         </div>
 
-        {/* Pending Requests Alert */}
         {requests.length > 0 && (
           <Card className="mb-6 border-2 border-accent/50 bg-accent/5">
             <CardHeader className="pb-2">
@@ -170,17 +190,18 @@ export default function MyPartiesPage() {
                 {requests.map((request) => (
                   <div
                     key={request.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                    className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={request.user.avatar} />
-                        <AvatarFallback>{request.user.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>
+                          {(request.user.username || request.user.name).charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{request.user.name}</p>
+                        <p className="font-medium">{request.user.username || request.user.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          wants to join &quot;{request.partyName}&quot; • {request.requestedAt}
+                          wants to join "{request.partyName}" • {relativeTime(request.requestedAt)}
                         </p>
                       </div>
                     </div>
@@ -188,13 +209,13 @@ export default function MyPartiesPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleRejectRequest(request.id)}
+                        onClick={() => handleRequestAction(request, "rejected")}
                       >
                         <XCircle className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => handleAcceptRequest(request.id)}
+                        onClick={() => handleRequestAction(request, "accepted")}
                       >
                         <CheckCircle2 className="h-4 w-4" />
                       </Button>
@@ -206,56 +227,52 @@ export default function MyPartiesPage() {
           </Card>
         )}
 
-        {/* Tabs */}
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="all">All ({parties.length})</TabsTrigger>
-            <TabsTrigger value="hosting">Hosting ({hostedParties.length})</TabsTrigger>
-            <TabsTrigger value="joined">Joined ({joinedParties.length})</TabsTrigger>
-          </TabsList>
+        {isLoading ? (
+          <Card className="border-2">
+            <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Loading parties...
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="all" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="all">All ({parties.length})</TabsTrigger>
+              <TabsTrigger value="hosting">Hosting ({hostedParties.length})</TabsTrigger>
+              <TabsTrigger value="joined">Joined ({joinedParties.length})</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
-            {parties.map((party) => (
-              <PartyCard key={party.id} party={party} />
-            ))}
-          </TabsContent>
-
-          <TabsContent value="hosting" className="space-y-4">
-            {hostedParties.length === 0 ? (
-              <EmptyState
-                title="No parties hosted yet"
-                description="Create your first party and invite players"
-                action={
-                  <Button onClick={() => router.push('/parties/create')}>
-                    Create Party
-                  </Button>
-                }
-              />
-            ) : (
-              hostedParties.map((party) => (
+            <TabsContent value="all" className="space-y-4">
+              {parties.map((party) => (
                 <PartyCard key={party.id} party={party} />
-              ))
-            )}
-          </TabsContent>
+              ))}
+            </TabsContent>
 
-          <TabsContent value="joined" className="space-y-4">
-            {joinedParties.length === 0 ? (
-              <EmptyState
-                title="No parties joined yet"
-                description="Browse available parties and request to join"
-                action={
-                  <Button onClick={() => router.push('/parties/join')}>
-                    Find Parties
-                  </Button>
-                }
-              />
-            ) : (
-              joinedParties.map((party) => (
-                <PartyCard key={party.id} party={party} />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="hosting" className="space-y-4">
+              {hostedParties.length === 0 ? (
+                <EmptyState
+                  title="No parties hosted yet"
+                  description="Create your first party and invite players"
+                  action={<Button onClick={() => router.push("/parties/create")}>Create Party</Button>}
+                />
+              ) : (
+                hostedParties.map((party) => <PartyCard key={party.id} party={party} />)
+              )}
+            </TabsContent>
+
+            <TabsContent value="joined" className="space-y-4">
+              {joinedParties.length === 0 ? (
+                <EmptyState
+                  title="No parties joined yet"
+                  description="Browse available parties and request to join"
+                  action={<Button onClick={() => router.push("/parties/join")}>Find Parties</Button>}
+                />
+              ) : (
+                joinedParties.map((party) => <PartyCard key={party.id} party={party} />)
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </main>
     </div>
   )
@@ -273,12 +290,15 @@ function PartyCard({ party }: { party: Party }) {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-bold">{party.name}</h3>
-                {party.role === 'host' && (
+                {party.role === "host" ? (
                   <Badge className="gap-1">
                     <Crown className="h-3 w-3" />
                     Host
                   </Badge>
-                )}
+                ) : null}
+                {party.status === "ongoing" ? (
+                  <Badge variant="secondary">Ongoing</Badge>
+                ) : null}
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -297,28 +317,14 @@ function PartyCard({ party }: { party: Party }) {
               </div>
 
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {party.players.slice(0, 4).map((player, i) => (
-                    <Avatar key={i} className="h-8 w-8 border-2 border-background">
-                      <AvatarImage src={player.avatar} />
-                      <AvatarFallback className="text-xs">
-                        {player.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {party.players.length > 4 && (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
-                      +{party.players.length - 4}
-                    </div>
-                  )}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {party.players.length}/{party.maxPlayers} players
+                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  {party.players}/{party.maxPlayers} players
                 </span>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {party.games.map(game => (
+                {party.games.map((game) => (
                   <Badge key={game} variant="secondary" className="gap-1 text-xs">
                     <Gamepad2 className="h-3 w-3" />
                     {game}
@@ -329,30 +335,23 @@ function PartyCard({ party }: { party: Party }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            {party.joinStatus === 'accepted' && (
+            {party.joinStatus === "accepted" ? (
               <Button asChild className="gap-2">
-                <Link href={`/parties/${party.id}/lobby`}>
-                  Enter Lobby
-                </Link>
+                <Link href={`/parties/${party.id}/lobby`}>Enter Lobby</Link>
               </Button>
-            )}
-            {party.joinStatus === 'pending' && (
+            ) : null}
+            {party.joinStatus === "pending" ? (
               <Badge variant="secondary" className="justify-center py-2">
                 <Clock className="mr-2 h-4 w-4" />
                 Waiting for approval
               </Badge>
-            )}
+            ) : null}
             <Button variant="outline" asChild className="gap-2">
               <Link href={`/parties/${party.id}`}>
                 <ExternalLink className="h-4 w-4" />
                 View Details
               </Link>
             </Button>
-            {party.role === 'host' && (
-              <Button variant="ghost" size="sm">
-                Manage Party
-              </Button>
-            )}
           </div>
         </div>
       </CardContent>
@@ -360,14 +359,14 @@ function PartyCard({ party }: { party: Party }) {
   )
 }
 
-function EmptyState({ 
-  title, 
-  description, 
-  action 
-}: { 
+function EmptyState({
+  title,
+  description,
+  action,
+}: {
   title: string
   description: string
-  action: React.ReactNode 
+  action: ReactNode
 }) {
   return (
     <Card className="border-2">
