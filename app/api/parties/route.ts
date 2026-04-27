@@ -2,9 +2,6 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import {
   combineDateAndTime,
-  getPlaceById,
-  matchesVenueType,
-  type PlaceCandidate,
 } from "@/lib/backend/app-service"
 import {
   getCurrentAppUserId,
@@ -20,7 +17,8 @@ interface CreatePartyPayload {
   time?: string
   maxPlayers?: number
   selectedGames?: string[]
-  place?: PlaceCandidate
+  locationName?: string
+  locationAddress?: string
 }
 
 interface PartyRow {
@@ -101,9 +99,9 @@ export async function POST(request: Request) {
     )
   }
 
-  if (!payload.place?.placeId) {
+  if (!payload.locationAddress || payload.locationAddress.trim().length < 3) {
     return NextResponse.json(
-      { error: "Please select a place from Google Maps results." },
+      { error: "Please enter the party location address." },
       { status: 400 }
     )
   }
@@ -111,40 +109,6 @@ export async function POST(request: Request) {
   if (!payload.date || !payload.time) {
     return NextResponse.json(
       { error: "Date and time are required." },
-      { status: 400 }
-    )
-  }
-
-  let place = null
-  try {
-    place = await getPlaceById(payload.place.placeId)
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Unable to validate selected place.",
-      },
-      { status: 400 }
-    )
-  }
-
-  if (!place) {
-    return NextResponse.json(
-      { error: "Selected place is invalid." },
-      { status: 400 }
-    )
-  }
-
-  if (!place.isPublicVenue) {
-    return NextResponse.json(
-      { error: "Selected place is not a public venue." },
-      { status: 400 }
-    )
-  }
-
-  if (!matchesVenueType(payload.venueType ?? null, place.types)) {
-    return NextResponse.json(
-      { error: "Selected place does not match selected venue type." },
       { status: 400 }
     )
   }
@@ -171,16 +135,21 @@ export async function POST(request: Request) {
     )
   }
 
+  const normalizedAddress = payload.locationAddress.trim()
+  const normalizedLocationName =
+    payload.locationName?.trim() || normalizedAddress
+
   const locationData = {
-    placeId: place.placeId,
-    displayName: place.displayName,
-    formattedAddress: place.formattedAddress,
-    latitude: place.latitude,
-    longitude: place.longitude,
-    primaryType: place.primaryType,
-    types: place.types,
-    googleMapsUri: place.googleMapsUri,
-    isPublicVenue: place.isPublicVenue,
+    placeId: null,
+    displayName: normalizedLocationName,
+    formattedAddress: normalizedAddress,
+    latitude: null,
+    longitude: null,
+    primaryType: payload.venueType ?? null,
+    types: payload.venueType ? [payload.venueType] : [],
+    googleMapsUri: null,
+    isPublicVenue: true,
+    isManuallyEntered: true,
     venueType: payload.venueType ?? null,
     description: payload.description ?? "",
     tags: Array.isArray(payload.tags) ? payload.tags : [],

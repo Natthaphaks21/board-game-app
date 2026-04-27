@@ -49,18 +49,6 @@ const venueTypes = [
   { id: 'community', name: 'Community Center', icon: '🏢' },
 ]
 
-interface PlaceSuggestion {
-  placeId: string
-  displayName: string
-  formattedAddress: string
-  latitude: number | null
-  longitude: number | null
-  types: string[]
-  primaryType: string | null
-  googleMapsUri: string | null
-  isPublicVenue: boolean
-}
-
 interface GameOption {
   id: string
   name: string
@@ -71,12 +59,8 @@ export default function CreatePartyPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false)
   const [isLoadingGames, setIsLoadingGames] = useState(false)
-  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([])
-  const [selectedPlace, setSelectedPlace] = useState<PlaceSuggestion | null>(null)
   const [gamesCatalogue, setGamesCatalogue] = useState<GameOption[]>(fallbackGames)
-  const [placeError, setPlaceError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -127,55 +111,10 @@ export default function CreatePartyPage() {
     void loadGames()
   }, [user])
 
-  useEffect(() => {
-    if (step !== 2) return
-
-    const query = formData.locationAddress.trim()
-    if (query.length < 3 || !formData.venueType) {
-      setPlaceSuggestions([])
-      return
-    }
-
-    const controller = new AbortController()
-    const timeout = setTimeout(async () => {
-      setIsSearchingPlaces(true)
-      try {
-        const response = await fetch(
-          `/api/places/search?q=${encodeURIComponent(query)}&venueType=${encodeURIComponent(formData.venueType)}`,
-          { signal: controller.signal }
-        )
-
-        if (!response.ok) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null
-          throw new Error(payload?.error || 'Unable to search locations')
-        }
-
-        const payload = (await response.json()) as { places: PlaceSuggestion[] }
-        setPlaceSuggestions(payload.places)
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          setPlaceSuggestions([])
-          setPlaceError(error instanceof Error ? error.message : 'Unable to search locations')
-        }
-      } finally {
-        setIsSearchingPlaces(false)
-      }
-    }, 350)
-
-    return () => {
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [formData.locationAddress, formData.venueType, step])
-
   if (!user) return null
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    if (name === 'locationAddress') {
-      setSelectedPlace(null)
-      setPlaceError('')
-    }
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
@@ -209,21 +148,10 @@ export default function CreatePartyPage() {
     game.name.toLowerCase().includes(formData.gameSearch.toLowerCase())
   )
 
-  const handleSelectPlace = (place: PlaceSuggestion) => {
-    setSelectedPlace(place)
-    setPlaceSuggestions([])
-    setPlaceError('')
-    setFormData(prev => ({
-      ...prev,
-      locationName: place.displayName,
-      locationAddress: place.formattedAddress,
-    }))
-  }
-
   const handleSubmit = async () => {
-    if (!selectedPlace || !selectedPlace.isPublicVenue) {
+    if (!formData.locationAddress.trim()) {
       setStep(2)
-      setPlaceError('Please choose a public venue from Google Maps results.')
+      toast.error('Please type the party location.')
       return
     }
 
@@ -241,11 +169,12 @@ export default function CreatePartyPage() {
           description: formData.description,
           tags: formData.tags,
           venueType: formData.venueType,
+          locationName: formData.locationName,
+          locationAddress: formData.locationAddress,
           date: formData.date,
           time: formData.time,
           maxPlayers: Number(formData.maxPlayers),
           selectedGames: selectedGameNames,
-          place: selectedPlace,
         }),
       })
 
@@ -267,7 +196,7 @@ export default function CreatePartyPage() {
       case 1:
         return formData.name.length >= 3
       case 2:
-        return Boolean(formData.venueType && selectedPlace?.isPublicVenue)
+        return Boolean(formData.venueType && formData.locationAddress.trim().length >= 3)
       case 3:
         return formData.date && formData.time
       case 4:
@@ -426,13 +355,9 @@ export default function CreatePartyPage() {
                         key={venue.id}
                         type="button"
                         onClick={() => {
-                          setSelectedPlace(null)
-                          setPlaceSuggestions([])
-                          setPlaceError('')
                           setFormData(prev => ({
                             ...prev,
                             venueType: venue.id,
-                            locationName: '',
                           }))
                         }}
                         className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-colors ${
@@ -449,68 +374,34 @@ export default function CreatePartyPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="locationAddress">Search Public Venue (Google Maps)</Label>
+                  <Label htmlFor="locationName">Location Name</Label>
+                  <Input
+                    id="locationName"
+                    name="locationName"
+                    placeholder="Example: Board Game Cafe"
+                    value={formData.locationName}
+                    onChange={handleInputChange}
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="locationAddress">Location Address (Type Manually)</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="locationAddress"
                       name="locationAddress"
-                      placeholder="Search cafes, restaurants, libraries..."
+                      placeholder="Example: 123 Sukhumvit Rd, Bangkok"
                       value={formData.locationAddress}
                       onChange={handleInputChange}
                       className="h-12 pl-10"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    You must select from Google Maps results. Only public venues are allowed.
+                    Google Maps search is temporarily disabled. Please type location details manually.
                   </p>
                 </div>
-
-                {isSearchingPlaces ? (
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Searching Google Maps...
-                  </div>
-                ) : null}
-
-                {placeSuggestions.length > 0 ? (
-                  <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-border p-2">
-                    {placeSuggestions.map((place) => (
-                      <button
-                        key={place.placeId}
-                        type="button"
-                        onClick={() => handleSelectPlace(place)}
-                        className="w-full rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50"
-                      >
-                        <p className="font-medium">{place.displayName}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{place.formattedAddress}</p>
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {place.types.slice(0, 3).map((type) => (
-                            <Badge key={type} variant="outline" className="text-[10px] uppercase">
-                              {type.replace(/_/g, ' ')}
-                            </Badge>
-                          ))}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
-                {selectedPlace ? (
-                  <div className="rounded-xl border border-primary/40 bg-primary/5 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{selectedPlace.displayName}</p>
-                        <p className="text-sm text-muted-foreground">{selectedPlace.formattedAddress}</p>
-                      </div>
-                      <Badge>Public Venue</Badge>
-                    </div>
-                  </div>
-                ) : null}
-
-                {placeError ? (
-                  <p className="text-sm text-destructive">{placeError}</p>
-                ) : null}
               </CardContent>
             </>
           )}
