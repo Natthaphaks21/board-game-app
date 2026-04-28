@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { DiceIcon } from '@/components/icons/dice-icon'
 import { useAuth } from '@/contexts/auth-context'
 import { User, Phone, MapPin, ChevronRight, Shield, IdCard, ArrowLeft, Loader2 } from 'lucide-react'
@@ -17,6 +27,7 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
@@ -114,6 +125,16 @@ export default function OnboardingPage() {
     }
   }
 
+  const handleCancelSignup = async () => {
+    setIsCancelling(true)
+    try {
+      await logout()
+      router.replace('/')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
   const isStepValid = () => {
     if (step === 1) {
       return (
@@ -150,12 +171,32 @@ export default function OnboardingPage() {
       <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12">
         {/* Back Button */}
         <div className="absolute left-4 top-4">
-          <Button variant="ghost" asChild>
-            <Link href="/" onClick={() => { void logout() }}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Sign Out
-            </Link>
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Cancel Signup
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel signup?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will sign you out and return you to the login page.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Stay Here</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleCancelSignup}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Sign Out and Return
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Header */}

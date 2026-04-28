@@ -569,6 +569,7 @@ export default function PartyLobbyPage() {
                     </CardTitle>
                     <CardDescription>
                       {party.members.filter((member) => member.arrived).length} arrived
+                      {party.isHost ? " • Host can mark members as arrived." : ""}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -596,7 +597,7 @@ export default function PartyLobbyPage() {
                                   onClick={() => handleConfirmMemberArrival(member.uid)}
                                   disabled={isSubmitting}
                                 >
-                                  Confirm
+                                  Mark Arrived
                                 </Button>
                               ) : null}
                             </div>

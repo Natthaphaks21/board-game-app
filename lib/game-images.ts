@@ -15,6 +15,16 @@ const GAME_IMAGE_BY_NAME: Record<string, string> = {
     "https://images.unsplash.com/photo-1560179406-1c6c60e0dc76?auto=format&fit=crop&w=160&q=80",
   carcassonne:
     "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=160&q=80",
+  werewolf:
+    "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+  insider:
+    "https://images.unsplash.com/photo-1605870445919-838d190e8e1b?auto=format&fit=crop&w=160&q=80",
+  dixit:
+    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=160&q=80",
+  "exploding kittens":
+    "https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=160&q=80",
+  coup:
+    "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=160&q=80",
 }
 
 export function getGameImageByName(name: string): string | null {
