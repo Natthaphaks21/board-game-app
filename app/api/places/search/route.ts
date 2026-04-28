@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { searchPublicPlaces } from "@/lib/backend/app-service"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -19,13 +20,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ places: [] })
   }
 
-  // Google Places is temporarily disabled.
-  // Keep endpoint for compatibility with older clients.
-  return NextResponse.json({
-    places: [],
-    message:
-      "Google Maps search is temporarily disabled. Please type location manually.",
-    query,
-    venueType: venueType ?? null,
-  })
+  try {
+    const places = await searchPublicPlaces(query, venueType)
+    return NextResponse.json({
+      places,
+      fallbackManual: false,
+      query,
+      venueType: venueType ?? null,
+    })
+  } catch (error) {
+    return NextResponse.json({
+      places: [],
+      fallbackManual: true,
+      message:
+        "Unable to load Google Maps results right now. Please fill location details manually.",
+      query,
+      venueType: venueType ?? null,
+      reason: error instanceof Error ? error.message : "places_search_failed",
+    })
+  }
 }

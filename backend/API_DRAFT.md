@@ -1,4 +1,4 @@
-# Backend Draft (Supabase, Manual Location Mode)
+# Backend Draft (Supabase, Places Fallback + Party Chat)
 
 This UI is now wired to these Next.js backend endpoints:
 
@@ -13,11 +13,18 @@ This UI is now wired to these Next.js backend endpoints:
   - Updates profile fields (`name`, `surname`, `username`) and optional auth metadata (`phone`, `address`, `dateOfBirth`)
 
 - `GET /api/places/search?q=...&venueType=...`
-  - Temporarily disabled, returns empty list + message to type location manually
+  - Happy path: uses Google Places API and returns public venue suggestions
+  - Fallback path: on API/key/quota errors, returns empty list with `fallbackManual: true`
 
 - `POST /api/parties`
-  - Input: party data + manual location text
-  - Behavior: stores manual location metadata in `public.parties.location_data`
+  - Input: party data + selected place (if available) or manual location text
+  - Behavior: always stores normalized location metadata in `public.parties.location_data`
+
+- `GET /api/parties/:id/chat`
+  - Returns party chat messages for host + pending/accepted participants
+
+- `POST /api/parties/:id/chat`
+  - Sends a message into party chat
 
 Main backend service helpers are in:
 - `lib/backend/app-service.ts`
@@ -31,7 +38,7 @@ Main backend service helpers are in:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `THAI_ID_HASH_SALT`
 
-Optional only if Places is enabled in the future:
+Optional for Google Places happy path (manual fallback still works):
 - `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 
 ## Login flow implemented

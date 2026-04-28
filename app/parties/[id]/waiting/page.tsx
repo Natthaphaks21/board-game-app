@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon } from "@/components/icons/dice-icon"
@@ -21,6 +22,7 @@ import {
   CheckCircle2,
   XCircle,
   Gamepad2,
+  Send,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -42,6 +44,27 @@ interface PartyDetail {
   maxPlayers: number
 }
 
+interface ChatMessage {
+  id: number
+  senderId: number
+  senderName: string
+  senderUsername: string | null
+  message: string
+  createdAt: string
+  isMine: boolean
+}
+
+function relativeTime(input: string): string {
+  const ts = new Date(input).getTime()
+  if (!Number.isFinite(ts)) return "now"
+
+  const diffSec = Math.max(1, Math.floor((Date.now() - ts) / 1000))
+  if (diffSec < 60) return `${diffSec}s ago`
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
+  return `${Math.floor(diffSec / 86400)}d ago`
+}
+
 export default function WaitingRoomPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -50,6 +73,10 @@ export default function WaitingRoomPage() {
   const [status, setStatus] = useState<RequestStatus>("pending")
   const [isLoading, setIsLoading] = useState(true)
   const [partyDetails, setPartyDetails] = useState<PartyDetail | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState("")
+  const [isLoadingChat, setIsLoadingChat] = useState(false)
+  const [isSendingChat, setIsSendingChat] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -74,6 +101,78 @@ export default function WaitingRoomPage() {
 
     void loadDetails()
   }, [params.id, router, user])
+
+  useEffect(() => {
+    if (!user) return
+
+    const partyId = params.id
+    if (!partyId) return
+
+    let mounted = true
+
+    const loadChat = async () => {
+      setIsLoadingChat(true)
+      try {
+        const response = await fetch(`/api/parties/${partyId}/chat?limit=30`, {
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const payload = (await response.json()) as { messages: ChatMessage[] }
+        if (!mounted) return
+        setMessages(payload.messages ?? [])
+      } catch {
+        // optional UI; ignore transient chat errors
+      } finally {
+        if (mounted) setIsLoadingChat(false)
+      }
+    }
+
+    void loadChat()
+    const interval = setInterval(() => {
+      void loadChat()
+    }, 6000)
+
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [params.id, user])
+
+  const sendChat = async () => {
+    const partyId = params.id
+    const message = chatInput.trim()
+    if (!partyId || !message) return
+
+    setIsSendingChat(true)
+    try {
+      const response = await fetch(`/api/parties/${partyId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; message?: ChatMessage }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to send message")
+      }
+
+      setChatInput("")
+      if (payload?.message) {
+        setMessages((prev) => [...prev, payload.message as ChatMessage])
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to send message")
+    } finally {
+      setIsSendingChat(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -254,10 +353,54 @@ export default function WaitingRoomPage() {
               </div>
 
               {status === "pending" ? (
-                <Button variant="outline" className="w-full gap-2" onClick={() => toast.info("Chat coming soon") }>
-                  <MessageCircle className="h-4 w-4" />
-                  Message Host
-                </Button>
+                <div className="space-y-3 rounded-xl border border-border p-3">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <MessageCircle className="h-4 w-4 text-primary" />
+                    Message Host
+                  </div>
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border p-2">
+                    {isLoadingChat ? (
+                      <p className="text-xs text-muted-foreground">Loading chat...</p>
+                    ) : messages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No chat yet.</p>
+                    ) : (
+                      messages.map((message) => (
+                        <div key={message.id} className="rounded-md bg-muted p-2 text-xs">
+                          <p className="mb-1 text-[11px] text-muted-foreground">
+                            {message.senderName} • {relativeTime(message.createdAt)}
+                          </p>
+                          <p>{message.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Type a message..."
+                      value={chatInput}
+                      onChange={(event) => setChatInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault()
+                          void sendChat()
+                        }
+                      }}
+                      maxLength={500}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void sendChat()}
+                      disabled={isSendingChat || chatInput.trim().length === 0}
+                    >
+                      {isSendingChat ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
               ) : null}
             </CardContent>
           </Card>

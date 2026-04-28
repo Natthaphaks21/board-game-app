@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon } from "@/components/icons/dice-icon"
@@ -25,6 +26,7 @@ import {
   Navigation,
   Loader2,
   XCircle,
+  Send,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -68,6 +70,16 @@ interface PartyDetail {
   pendingRequests: PendingRequest[]
 }
 
+interface ChatMessage {
+  id: number
+  senderId: number
+  senderName: string
+  senderUsername: string | null
+  message: string
+  createdAt: string
+  isMine: boolean
+}
+
 function relativeTime(input: string | null): string {
   if (!input) return "just now"
   const ts = new Date(input).getTime()
@@ -86,8 +98,13 @@ export default function PartyLobbyPage() {
   const params = useParams<{ id: string }>()
 
   const [party, setParty] = useState<PartyDetail | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingChat, setIsLoadingChat] = useState(true)
+  const [chatUnavailable, setChatUnavailable] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSendingChat, setIsSendingChat] = useState(false)
 
   const loadParty = async () => {
     const partyId = params.id
@@ -111,6 +128,33 @@ export default function PartyLobbyPage() {
     }
   }
 
+  const loadChat = async () => {
+    const partyId = params.id
+    if (!partyId) return
+
+    try {
+      const response = await fetch(`/api/parties/${partyId}/chat?limit=80`, {
+        cache: "no-store",
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null
+        setChatUnavailable(payload?.error ?? "Chat is currently unavailable.")
+        return
+      }
+
+      const payload = (await response.json()) as { messages: ChatMessage[] }
+      setChatUnavailable(null)
+      setMessages(payload.messages ?? [])
+    } catch {
+      setChatUnavailable("Chat is currently unavailable.")
+    } finally {
+      setIsLoadingChat(false)
+    }
+  }
+
   useEffect(() => {
     if (!user) {
       router.push("/")
@@ -118,6 +162,13 @@ export default function PartyLobbyPage() {
     }
 
     void loadParty()
+    void loadChat()
+
+    const poll = setInterval(() => {
+      void loadChat()
+    }, 5000)
+
+    return () => clearInterval(poll)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, router, user])
 
@@ -209,6 +260,40 @@ export default function PartyLobbyPage() {
       toast.error(error instanceof Error ? error.message : "Unable to update request")
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleSendChat = async () => {
+    const partyId = params.id
+    const message = chatInput.trim()
+    if (!partyId || !message) return
+
+    setIsSendingChat(true)
+    try {
+      const response = await fetch(`/api/parties/${partyId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; message?: ChatMessage }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to send message")
+      }
+
+      setChatInput("")
+      if (payload?.message) {
+        setMessages((prev) => [...prev, payload.message as ChatMessage])
+      } else {
+        await loadChat()
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to send message")
+    } finally {
+      setIsSendingChat(false)
     }
   }
 
@@ -473,10 +558,73 @@ export default function PartyLobbyPage() {
                   </CardContent>
                 </Card>
 
-                <Button variant="outline" className="w-full" size="lg" onClick={() => toast.info("Chat coming soon") }>
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Party Chat
-                </Button>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5 text-primary" />
+                      Party Chat
+                    </CardTitle>
+                    <CardDescription>Host and participants can message here</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border border-border p-3">
+                      {isLoadingChat ? (
+                        <p className="text-sm text-muted-foreground">Loading chat...</p>
+                      ) : chatUnavailable ? (
+                        <p className="text-sm text-muted-foreground">{chatUnavailable}</p>
+                      ) : messages.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No messages yet. Start the conversation.
+                        </p>
+                      ) : (
+                        messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`rounded-lg px-3 py-2 text-sm ${
+                              message.isMine
+                                ? "ml-6 bg-primary/15"
+                                : "mr-6 bg-muted"
+                            }`}
+                          >
+                            <p className="mb-1 text-xs text-muted-foreground">
+                              {message.senderName} • {relativeTime(message.createdAt)}
+                            </p>
+                            <p>{message.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Type a message..."
+                        value={chatInput}
+                        onChange={(event) => setChatInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault()
+                            void handleSendChat()
+                          }
+                        }}
+                        maxLength={500}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => void handleSendChat()}
+                        disabled={
+                          isSendingChat ||
+                          chatInput.trim().length === 0 ||
+                          Boolean(chatUnavailable)
+                        }
+                      >
+                        {isSendingChat ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </>

@@ -318,7 +318,11 @@ export default function PartyDetailPage() {
 
             <Card className="mt-6 border-2">
               <CardContent className="flex flex-col gap-3 p-4 md:flex-row">
-                <Button variant="outline" className="flex-1 gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => router.push(`/parties/${params.id}/lobby`)}
+                >
                   <MessageCircle className="h-4 w-4" />
                   Message Group
                 </Button>

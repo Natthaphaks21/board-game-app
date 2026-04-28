@@ -19,6 +19,17 @@ interface CreatePartyPayload {
   selectedGames?: string[]
   locationName?: string
   locationAddress?: string
+  selectedPlace?: {
+    placeId?: string
+    displayName?: string
+    formattedAddress?: string
+    latitude?: number | null
+    longitude?: number | null
+    types?: string[]
+    primaryType?: string | null
+    googleMapsUri?: string | null
+    isPublicVenue?: boolean
+  } | null
 }
 
 interface PartyRow {
@@ -139,17 +150,54 @@ export async function POST(request: Request) {
   const normalizedLocationName =
     payload.locationName?.trim() || normalizedAddress
 
+  const selectedPlace =
+    payload.selectedPlace && typeof payload.selectedPlace === "object"
+      ? payload.selectedPlace
+      : null
+
+  const selectedPlaceId =
+    typeof selectedPlace?.placeId === "string" && selectedPlace.placeId.trim().length > 0
+      ? selectedPlace.placeId.trim()
+      : null
+
+  const selectedPlaceName =
+    typeof selectedPlace?.displayName === "string" && selectedPlace.displayName.trim().length > 0
+      ? selectedPlace.displayName.trim()
+      : null
+
+  const selectedPlaceAddress =
+    typeof selectedPlace?.formattedAddress === "string" &&
+    selectedPlace.formattedAddress.trim().length > 0
+      ? selectedPlace.formattedAddress.trim()
+      : null
+
+  const finalLocationName = selectedPlaceName ?? normalizedLocationName
+  const finalLocationAddress = selectedPlaceAddress ?? normalizedAddress
+  const selectedTypes = Array.isArray(selectedPlace?.types)
+    ? selectedPlace.types.filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+      )
+    : []
+
   const locationData = {
-    placeId: null,
-    displayName: normalizedLocationName,
-    formattedAddress: normalizedAddress,
-    latitude: null,
-    longitude: null,
-    primaryType: payload.venueType ?? null,
-    types: payload.venueType ? [payload.venueType] : [],
-    googleMapsUri: null,
+    placeId: selectedPlaceId,
+    displayName: finalLocationName,
+    formattedAddress: finalLocationAddress,
+    latitude:
+      typeof selectedPlace?.latitude === "number" ? selectedPlace.latitude : null,
+    longitude:
+      typeof selectedPlace?.longitude === "number" ? selectedPlace.longitude : null,
+    primaryType:
+      (typeof selectedPlace?.primaryType === "string" && selectedPlace.primaryType) ||
+      payload.venueType ||
+      null,
+    types: selectedTypes.length > 0 ? selectedTypes : payload.venueType ? [payload.venueType] : [],
+    googleMapsUri:
+      typeof selectedPlace?.googleMapsUri === "string"
+        ? selectedPlace.googleMapsUri
+        : null,
     isPublicVenue: true,
-    isManuallyEntered: true,
+    isManuallyEntered: !selectedPlaceId,
     venueType: payload.venueType ?? null,
     description: payload.description ?? "",
     tags: Array.isArray(payload.tags) ? payload.tags : [],

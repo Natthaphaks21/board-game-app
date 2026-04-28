@@ -74,7 +74,9 @@ VALUES
   (9203, 'Codenames', 'Party', 'https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=400&q=80'),
   (9204, 'Wingspan', 'Engine Building', 'https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=400&q=80'),
   (9205, 'Azul', 'Abstract', 'https://images.unsplash.com/photo-1606053896989-1ff2f7976db5?auto=format&fit=crop&w=400&q=80'),
-  (9206, 'Pandemic', 'Cooperative', 'https://images.unsplash.com/photo-1603732551658-5fabbafa84eb?auto=format&fit=crop&w=400&q=80')
+  (9206, 'Pandemic', 'Cooperative', 'https://images.unsplash.com/photo-1603732551658-5fabbafa84eb?auto=format&fit=crop&w=400&q=80'),
+  (9207, 'Splendor', 'Engine Building', 'https://images.unsplash.com/photo-1560179406-1c6c60e0dc76?auto=format&fit=crop&w=400&q=80'),
+  (9208, 'Carcassonne', 'Tile Placement', 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80')
 ON CONFLICT (catalogue_id) DO UPDATE
 SET
   game_name = EXCLUDED.game_name,
@@ -106,7 +108,11 @@ VALUES
   (9306, 9203, NULL, 'available', NOW() - INTERVAL '1 day'),
   (9307, 9204, NULL, 'available', NOW() - INTERVAL '1 day'),
   (9308, 9205, NULL, 'available', NOW() - INTERVAL '1 day'),
-  (9309, 9206, NULL, 'available', NOW() - INTERVAL '1 day')
+  (9309, 9206, NULL, 'available', NOW() - INTERVAL '1 day'),
+  (9310, 9207, NULL, 'available', NOW() - INTERVAL '1 day'),
+  (9311, 9207, NULL, 'available', NOW() - INTERVAL '1 day'),
+  (9312, 9208, NULL, 'available', NOW() - INTERVAL '1 day'),
+  (9313, 9208, (SELECT vid FROM first_member), 'lended', NOW() - INTERVAL '2 days')
 ON CONFLICT (item_id) DO UPDATE
 SET
   catalogue_id = EXCLUDED.catalogue_id,
@@ -193,6 +199,57 @@ VALUES
     (SELECT host_uid FROM host_pick),
     NOW() - INTERVAL '7 days',
     NOW() - INTERVAL '9 days'
+  ),
+  (
+    9104,
+    'After Work Quick Games',
+    jsonb_build_object(
+      'displayName', 'Sathorn Play Space',
+      'formattedAddress', 'Sathorn Rd, Bangkok',
+      'venueType', 'community',
+      'description', 'Easy games for weekday evening.',
+      'tags', jsonb_build_array('Casual', 'Quick Rounds'),
+      'selectedGames', jsonb_build_array('Codenames', 'Splendor'),
+      'maxPlayers', 6,
+      'isManuallyEntered', true
+    ),
+    (SELECT host_uid FROM host_pick),
+    NOW() + INTERVAL '3 days',
+    NOW() - INTERVAL '5 hours'
+  ),
+  (
+    9105,
+    'Sunday Family Table',
+    jsonb_build_object(
+      'displayName', 'Central Board Hub',
+      'formattedAddress', 'Phaya Thai Rd, Bangkok',
+      'venueType', 'cafe',
+      'description', 'Family-friendly table with medium weight games.',
+      'tags', jsonb_build_array('Family', 'Relaxed'),
+      'selectedGames', jsonb_build_array('Ticket to Ride', 'Carcassonne'),
+      'maxPlayers', 5,
+      'isManuallyEntered', true
+    ),
+    (SELECT host_uid FROM host_pick),
+    NOW() + INTERVAL '5 days',
+    NOW() - INTERVAL '2 hours'
+  ),
+  (
+    9106,
+    'Past Strategy Marathon',
+    jsonb_build_object(
+      'displayName', 'Riverside Board Loft',
+      'formattedAddress', 'Charoen Nakhon Rd, Bangkok',
+      'venueType', 'cafe',
+      'description', 'Long strategy session for experienced players.',
+      'tags', jsonb_build_array('Strategy', 'Advanced'),
+      'selectedGames', jsonb_build_array('Wingspan', 'Azul'),
+      'maxPlayers', 4,
+      'isManuallyEntered', true
+    ),
+    (SELECT host_uid FROM host_pick),
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '6 days'
   )
 ON CONFLICT (pid) DO UPDATE
 SET
@@ -225,8 +282,13 @@ VALUES
   (9101, (SELECT uid FROM player_a), NOW() - INTERVAL '1 day', 'accepted', NULL, false),
   (9101, (SELECT uid FROM player_b), NOW() - INTERVAL '20 hours', 'pending', NULL, false),
   (9102, (SELECT uid FROM player_a), NOW() - INTERVAL '10 hours', 'accepted', NULL, false),
+  (9104, (SELECT uid FROM player_a), NOW() - INTERVAL '2 hours', 'accepted', NULL, false),
+  (9104, (SELECT uid FROM player_b), NOW() - INTERVAL '90 minutes', 'pending', NULL, false),
+  (9105, (SELECT uid FROM player_b), NOW() - INTERVAL '1 hour', 'accepted', NULL, false),
   (9103, (SELECT uid FROM player_a), NOW() - INTERVAL '8 days', 'accepted', NOW() - INTERVAL '7 days', true),
-  (9103, (SELECT uid FROM player_b), NOW() - INTERVAL '8 days', 'accepted', NULL, false)
+  (9103, (SELECT uid FROM player_b), NOW() - INTERVAL '8 days', 'accepted', NULL, false),
+  (9106, (SELECT uid FROM player_a), NOW() - INTERVAL '4 days', 'accepted', NOW() - INTERVAL '3 days', true),
+  (9106, (SELECT uid FROM player_b), NOW() - INTERVAL '4 days', 'accepted', NOW() - INTERVAL '3 days', true)
 ON CONFLICT (party_id, user_id) DO UPDATE
 SET
   request_time = EXCLUDED.request_time,
@@ -235,7 +297,33 @@ SET
   confirmed_arrival = EXCLUDED.confirmed_arrival;
 
 -- ---------------------------------------------------------------------------
--- 5) Keep identity sequences ahead of manual IDs.
+-- 5) Optional chat demo data (if chat table exists).
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'party_messages'
+  ) THEN
+    DELETE FROM public.party_messages
+    WHERE party_id IN (9101, 9102, 9104, 9105, 9106);
+
+    INSERT INTO public.party_messages (party_id, sender_id, sender_name, message, created_at)
+    VALUES
+      (9101, 9001, 'demo_host', 'Welcome everyone. We will start around 19:00.', NOW() - INTERVAL '10 hours'),
+      (9101, 9002, 'demo_player_a', 'I can bring extra sleeves for cards.', NOW() - INTERVAL '9 hours 45 minutes'),
+      (9102, 9001, 'demo_host', 'Feel free to invite one more friend if you want.', NOW() - INTERVAL '6 hours'),
+      (9104, 9001, 'demo_host', 'Theme for this table is short games under 45 minutes.', NOW() - INTERVAL '2 hours'),
+      (9104, 9002, 'demo_player_a', 'Perfect, I will arrive a bit early.', NOW() - INTERVAL '95 minutes'),
+      (9105, 9001, 'demo_host', 'This one is beginner friendly for family players.', NOW() - INTERVAL '50 minutes'),
+      (9106, 9002, 'demo_player_a', 'Great session yesterday, thanks host!', NOW() - INTERVAL '2 days'),
+      (9106, 9003, 'demo_player_b', 'Let us do another strategy night next month.', NOW() - INTERVAL '2 days');
+  END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 6) Keep identity sequences ahead of manual IDs.
 -- ---------------------------------------------------------------------------
 SELECT setval(
   pg_get_serial_sequence('public.users', 'uid'),
@@ -260,3 +348,18 @@ SELECT setval(
   GREATEST((SELECT COALESCE(MAX(pid), 1) FROM public.parties), 1),
   true
 );
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'party_messages'
+  ) THEN
+    PERFORM setval(
+      pg_get_serial_sequence('public.party_messages', 'id'),
+      GREATEST((SELECT COALESCE(MAX(id), 1) FROM public.party_messages), 1),
+      true
+    );
+  END IF;
+END $$;

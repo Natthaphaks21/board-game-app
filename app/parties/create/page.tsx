@@ -54,12 +54,28 @@ interface GameOption {
   name: string
 }
 
+interface PlaceSearchResult {
+  placeId: string
+  displayName: string
+  formattedAddress: string
+  latitude: number | null
+  longitude: number | null
+  types: string[]
+  primaryType: string | null
+  googleMapsUri: string | null
+  isPublicVenue: boolean
+}
+
 export default function CreatePartyPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingGames, setIsLoadingGames] = useState(false)
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false)
+  const [placeResults, setPlaceResults] = useState<PlaceSearchResult[]>([])
+  const [placeSearch, setPlaceSearch] = useState("")
+  const [placeHint, setPlaceHint] = useState<string | null>(null)
   const [gamesCatalogue, setGamesCatalogue] = useState<GameOption[]>(fallbackGames)
   const [formData, setFormData] = useState({
     name: '',
@@ -69,6 +85,7 @@ export default function CreatePartyPage() {
     venueType: '',
     locationName: '',
     locationAddress: '',
+    selectedPlace: null as PlaceSearchResult | null,
     date: '',
     time: '',
     maxPlayers: '4',
@@ -115,7 +132,72 @@ export default function CreatePartyPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === "locationName" || name === "locationAddress"
+        ? { selectedPlace: null }
+        : {}),
+    }))
+  }
+
+  const searchPlaces = async () => {
+    const query = placeSearch.trim()
+    if (query.length < 3) {
+      setPlaceResults([])
+      setPlaceHint("Type at least 3 characters to search places.")
+      return
+    }
+
+    setIsSearchingPlaces(true)
+    try {
+      const response = await fetch(
+        `/api/places/search?q=${encodeURIComponent(query)}&venueType=${encodeURIComponent(formData.venueType || "")}`,
+        { cache: "no-store" }
+      )
+
+      if (!response.ok) {
+        throw new Error("Unable to search places. Please fill location manually.")
+      }
+
+      const payload = (await response.json()) as {
+        places?: PlaceSearchResult[]
+        fallbackManual?: boolean
+        message?: string
+      }
+
+      const places = payload.places ?? []
+      setPlaceResults(places)
+
+      if (payload.fallbackManual) {
+        setPlaceHint(payload.message ?? "Map search unavailable. Please fill location manually.")
+        return
+      }
+
+      if (places.length === 0) {
+        setPlaceHint("No public places found. Please type the location details manually.")
+        return
+      }
+
+      setPlaceHint(`Found ${places.length} places. Select one or continue manual entry.`)
+    } catch (error) {
+      setPlaceResults([])
+      setPlaceHint("Search failed. Please type location manually.")
+      toast.warning(error instanceof Error ? error.message : "Search failed. Please type location manually.")
+    } finally {
+      setIsSearchingPlaces(false)
+    }
+  }
+
+  const selectPlace = (place: PlaceSearchResult) => {
+    setFormData((prev) => ({
+      ...prev,
+      selectedPlace: place,
+      locationName: place.displayName,
+      locationAddress: place.formattedAddress,
+      venueType: prev.venueType || place.primaryType || "cafe",
+    }))
+    setPlaceHint("Place selected. You can still edit fields manually before submit.")
   }
 
   const addTag = () => {
@@ -171,6 +253,7 @@ export default function CreatePartyPage() {
           venueType: formData.venueType,
           locationName: formData.locationName,
           locationAddress: formData.locationAddress,
+          selectedPlace: formData.selectedPlace,
           date: formData.date,
           time: formData.time,
           maxPlayers: Number(formData.maxPlayers),
@@ -374,6 +457,50 @@ export default function CreatePartyPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="placeSearch">Search Public Place (Google Maps)</Label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="placeSearch"
+                        name="placeSearch"
+                        placeholder="Search cafe, restaurant, library..."
+                        value={placeSearch}
+                        onChange={(e) => setPlaceSearch(e.target.value)}
+                        className="h-12 pl-10"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12"
+                      onClick={() => { void searchPlaces() }}
+                      disabled={isSearchingPlaces}
+                    >
+                      {isSearchingPlaces ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                    </Button>
+                  </div>
+                  {placeHint ? (
+                    <p className="text-xs text-muted-foreground">{placeHint}</p>
+                  ) : null}
+                  {placeResults.length > 0 ? (
+                    <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-border p-2">
+                      {placeResults.map((place) => (
+                        <button
+                          key={place.placeId}
+                          type="button"
+                          onClick={() => selectPlace(place)}
+                          className="w-full rounded-md border border-border p-3 text-left transition-colors hover:bg-muted"
+                        >
+                          <p className="font-medium">{place.displayName}</p>
+                          <p className="text-xs text-muted-foreground">{place.formattedAddress}</p>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="locationName">Location Name</Label>
                   <Input
                     id="locationName"
@@ -399,7 +526,7 @@ export default function CreatePartyPage() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Google Maps search is temporarily disabled. Please type location details manually.
+                    If Google Maps search fails, just type details manually and continue.
                   </p>
                 </div>
               </CardContent>

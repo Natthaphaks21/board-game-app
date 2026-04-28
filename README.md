@@ -4,7 +4,8 @@ Next.js + Supabase app with:
 - Google OAuth first-time signup flow
 - Email/password login after onboarding
 - Thai ID checksum validation with privacy-safe storage (hash + last4 only)
-- Party creation with manual location input (Google Places currently disabled)
+- Party creation with Google Places happy path + manual fallback
+- Party chat in lobby/waiting flow
 
 ## 1) Run locally
 
@@ -23,7 +24,7 @@ Set these in `.env.local` and in Vercel Project Settings > Environment Variables
 - `THAI_ID_HASH_SALT`
 - `NEXT_PUBLIC_AUTH_REDIRECT_URL` (optional, set to your exact Vercel callback URL)
 
-Optional only if you re-enable Google Places later:
+Optional for Google Places happy path (manual fallback still works without it):
 - `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 
 ## 3) Supabase setup
@@ -36,8 +37,10 @@ Run SQL in Supabase SQL Editor:
    - game image metadata columns
    - storage bucket + policies for cover images
    - update policy for borrow/return flow
-4. Optional demo/mock data: run `scripts/005_demo_seed_data.sql`
+4. Run `scripts/006_party_chat.sql` to add party chat table + RLS policies
+5. Optional demo/mock data: run `scripts/005_demo_seed_data.sql`
    - Adds sample users, parties, joins, game catalogue, and borrow inventory
+   - Adds seeded chat messages (if `party_messages` exists)
    - Safe to run multiple times (idempotent updates)
 
 Image storage best practice:
