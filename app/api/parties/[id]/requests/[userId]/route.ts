@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { getCurrentAppUserId, type JoinStatus } from "@/lib/backend/party-data"
+import {
+  getCurrentAppUserId,
+  isPartyCancelled,
+  type JoinStatus,
+} from "@/lib/backend/party-data"
 
 interface StatusPayload {
   status?: JoinStatus
@@ -44,7 +48,7 @@ export async function PATCH(
 
   const { data: party, error: partyError } = await supabase
     .from("parties")
-    .select("host_id")
+    .select("host_id,location_data")
     .eq("pid", partyId)
     .maybeSingle()
 
@@ -54,6 +58,13 @@ export async function PATCH(
 
   if (!party) {
     return NextResponse.json({ error: "Party not found." }, { status: 404 })
+  }
+
+  if (isPartyCancelled(party.location_data)) {
+    return NextResponse.json(
+      { error: "This party has been cancelled." },
+      { status: 400 }
+    )
   }
 
   if (party.host_id !== currentAppUserId) {

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DiceIcon } from '@/components/icons/dice-icon'
 import { useAuth } from '@/contexts/auth-context'
-import { User, ChevronRight, Shield, IdCard, ArrowLeft, Loader2 } from 'lucide-react'
+import { User, Phone, MapPin, ChevronRight, Shield, IdCard, ArrowLeft, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function OnboardingPage() {
@@ -21,6 +21,8 @@ export default function OnboardingPage() {
     name: '',
     surname: '',
     username: user?.username || '',
+    phone: '',
+    address: '',
     password: '',
     confirmPassword: '',
     thaiCitizenId: '',
@@ -91,6 +93,8 @@ export default function OnboardingPage() {
           name: formData.name.trim(),
           surname: formData.surname.trim(),
           username: formData.username.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
           password: formData.password,
           thaiCitizenId: formData.thaiCitizenId,
         }),
@@ -116,6 +120,8 @@ export default function OnboardingPage() {
         formData.name.length >= 2 &&
         formData.surname.length >= 2 &&
         formData.username.length >= 3 &&
+        formData.phone.trim().length >= 9 &&
+        formData.address.trim().length >= 8 &&
         formData.password.length >= 8 &&
         formData.confirmPassword.length >= 8
       )
@@ -239,6 +245,39 @@ export default function OnboardingPage() {
                   <p className="text-xs text-muted-foreground">
                     This will be shown to other players
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    inputMode="tel"
+                    placeholder="08X-XXX-XXXX"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="h-12"
+                    maxLength={20}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
+                  </Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    placeholder="Your current address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="h-12"
+                    maxLength={180}
+                  />
                 </div>
 
                 <div className="space-y-2">

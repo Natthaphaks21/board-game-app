@@ -107,6 +107,7 @@ export default function JoinPartyPage() {
       .filter((party) => {
         const needle = searchQuery.toLowerCase()
         const matchesSearch =
+          party.id.toLowerCase().includes(needle) ||
           party.name.toLowerCase().includes(needle) ||
           party.games.some((game) => game.toLowerCase().includes(needle)) ||
           party.location.toLowerCase().includes(needle)
@@ -260,6 +261,7 @@ export default function JoinPartyPage() {
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-lg font-bold">{party.name}</h3>
+                            <Badge variant="outline" className="text-xs">UID: {party.id}</Badge>
                             {isPending ? <Badge variant="secondary">Requested</Badge> : null}
                           </div>
 

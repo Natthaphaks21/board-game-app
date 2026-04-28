@@ -123,7 +123,7 @@ export async function GET() {
   const parties = mappedParties
     .map((party) => ({
       ...party,
-      status: getPartyStatus(party.appointmentTime),
+      status: getPartyStatus(party.appointmentTime, party.locationData),
       role: party.role,
     }))
     .filter((party) => party.status !== "completed")

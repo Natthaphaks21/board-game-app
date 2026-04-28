@@ -28,12 +28,13 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-type PartyStatus = "upcoming" | "ongoing" | "completed"
+type PartyStatus = "upcoming" | "ongoing" | "completed" | "cancelled"
 type JoinStatus = "pending" | "accepted" | "rejected" | "none"
 
 interface Party {
   id: string
   name: string
+  appointmentTime: string
   role: "host" | "player" | "guest"
   location: string
   date: string
@@ -152,6 +153,55 @@ export default function MyPartiesPage() {
     }
   }
 
+  const handleCancelParty = async (party: Party) => {
+    try {
+      const response = await fetch(`/api/parties/${party.id}/cancel`, {
+        method: "POST",
+      })
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to cancel party")
+      }
+
+      setParties((prev) =>
+        prev.map((row) =>
+          row.id === party.id
+            ? {
+                ...row,
+                status: "cancelled" as PartyStatus,
+              }
+            : row
+        )
+      )
+      toast.success(`Party "${party.name}" cancelled`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to cancel party")
+    }
+  }
+
+  const handleLeaveParty = async (party: Party) => {
+    try {
+      const response = await fetch(`/api/parties/${party.id}/leave`, {
+        method: "POST",
+      })
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to leave party")
+      }
+
+      setParties((prev) => prev.filter((row) => row.id !== party.id))
+      toast.success(`You left "${party.name}"`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to leave party")
+    }
+  }
+
   if (!user) return null
 
   return (
@@ -244,7 +294,12 @@ export default function MyPartiesPage() {
 
             <TabsContent value="all" className="space-y-4">
               {parties.map((party) => (
-                <PartyCard key={party.id} party={party} />
+                <PartyCard
+                  key={party.id}
+                  party={party}
+                  onCancel={handleCancelParty}
+                  onLeave={handleLeaveParty}
+                />
               ))}
             </TabsContent>
 
@@ -256,7 +311,14 @@ export default function MyPartiesPage() {
                   action={<Button onClick={() => router.push("/parties/create")}>Create Party</Button>}
                 />
               ) : (
-                hostedParties.map((party) => <PartyCard key={party.id} party={party} />)
+                hostedParties.map((party) => (
+                  <PartyCard
+                    key={party.id}
+                    party={party}
+                    onCancel={handleCancelParty}
+                    onLeave={handleLeaveParty}
+                  />
+                ))
               )}
             </TabsContent>
 
@@ -268,7 +330,14 @@ export default function MyPartiesPage() {
                   action={<Button onClick={() => router.push("/parties/join")}>Find Parties</Button>}
                 />
               ) : (
-                joinedParties.map((party) => <PartyCard key={party.id} party={party} />)
+                joinedParties.map((party) => (
+                  <PartyCard
+                    key={party.id}
+                    party={party}
+                    onCancel={handleCancelParty}
+                    onLeave={handleLeaveParty}
+                  />
+                ))
               )}
             </TabsContent>
           </Tabs>
@@ -278,7 +347,15 @@ export default function MyPartiesPage() {
   )
 }
 
-function PartyCard({ party }: { party: Party }) {
+function PartyCard({
+  party,
+  onCancel,
+  onLeave,
+}: {
+  party: Party
+  onCancel: (party: Party) => void
+  onLeave: (party: Party) => void
+}) {
   return (
     <Card className="border-2 transition-colors hover:border-primary/50">
       <CardContent className="p-6">
@@ -298,6 +375,9 @@ function PartyCard({ party }: { party: Party }) {
                 ) : null}
                 {party.status === "ongoing" ? (
                   <Badge variant="secondary">Ongoing</Badge>
+                ) : null}
+                {party.status === "cancelled" ? (
+                  <Badge variant="destructive">Cancelled</Badge>
                 ) : null}
               </div>
 
@@ -336,7 +416,11 @@ function PartyCard({ party }: { party: Party }) {
 
           <div className="flex flex-col gap-2">
             {party.joinStatus === "accepted" ? (
-              <Button asChild className="gap-2">
+              <Button
+                asChild
+                className="gap-2"
+                disabled={party.status === "cancelled"}
+              >
                 <Link href={`/parties/${party.id}/lobby`}>Enter Lobby</Link>
               </Button>
             ) : null}
@@ -352,6 +436,23 @@ function PartyCard({ party }: { party: Party }) {
                 View Details
               </Link>
             </Button>
+            {party.role === "host" ? (
+              <Button
+                variant="destructive"
+                onClick={() => onCancel(party)}
+                disabled={party.status === "cancelled"}
+              >
+                Cancel Party
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => onLeave(party)}
+                disabled={party.status === "cancelled"}
+              >
+                Leave Party
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

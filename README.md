@@ -6,6 +6,8 @@ Next.js + Supabase app with:
 - Thai ID checksum validation with privacy-safe storage (hash + last4 only)
 - Party creation with Google Places happy path + manual fallback
 - Party chat in lobby/waiting flow
+- Host cancel party + participant leave party (30-minute cutoff)
+- Membership tiers for borrow slots (Small 3, Medium 5, Large 8)
 
 ## 1) Run locally
 
@@ -41,6 +43,7 @@ Run SQL in Supabase SQL Editor:
 5. Optional demo/mock data: run `scripts/005_demo_seed_data.sql`
    - Adds sample users, parties, joins, game catalogue, and borrow inventory
    - Adds seeded chat messages (if `party_messages` exists)
+   - Includes cancelled-session demo state
    - Safe to run multiple times (idempotent updates)
 
 Image storage best practice:

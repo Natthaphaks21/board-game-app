@@ -26,6 +26,17 @@ This UI is now wired to these Next.js backend endpoints:
 - `POST /api/parties/:id/chat`
   - Sends a message into party chat
 
+- `POST /api/parties/:id/cancel`
+  - Host cancels the party (session is marked cancelled, pending requests are rejected)
+
+- `POST /api/parties/:id/leave`
+  - Participant leaves a party
+  - Leave window: up to 30 minutes before appointment time (cancelled rooms can be left anytime)
+
+- `POST /api/membership/subscribe`
+  - Activates membership after PromptPay flow
+  - Supported tiers: `Small(3)`, `Medium(5)`, `Large(8)` borrow slots
+
 Main backend service helpers are in:
 - `lib/backend/app-service.ts`
 

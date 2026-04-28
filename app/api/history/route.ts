@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import {
+  getPartyStatus,
   getCurrentAppUserId,
   mapPartiesToList,
 } from "@/lib/backend/party-data"
@@ -37,13 +38,10 @@ export async function GET() {
     return NextResponse.json({ parties: [] })
   }
 
-  const nowIso = new Date().toISOString()
-
   const { data: hostedPast, error: hostedPastError } = await supabase
     .from("parties")
     .select("pid,party_name,location_data,host_id,appointment_time,created_at")
     .eq("host_id", currentAppUserId)
-    .lt("appointment_time", nowIso)
 
   if (hostedPastError) {
     return NextResponse.json(
@@ -74,13 +72,12 @@ export async function GET() {
     )
   )
 
-  let joinedPastRows: PartyRow[] = []
+  let joinedRows: PartyRow[] = []
   if (joinedPartyIds.length > 0) {
     const { data, error } = await supabase
       .from("parties")
       .select("pid,party_name,location_data,host_id,appointment_time,created_at")
       .in("pid", joinedPartyIds)
-      .lt("appointment_time", nowIso)
 
     if (error) {
       return NextResponse.json(
@@ -89,12 +86,12 @@ export async function GET() {
       )
     }
 
-    joinedPastRows = (data ?? []) as PartyRow[]
+    joinedRows = (data ?? []) as PartyRow[]
   }
 
   const allRows = [
     ...((hostedPast ?? []) as PartyRow[]),
-    ...joinedPastRows,
+    ...joinedRows,
   ]
 
   const partyList = await mapPartiesToList(supabase, allRows, currentAppUserId)
@@ -108,16 +105,21 @@ export async function GET() {
     .map((party) => {
       const selfJoin = joinMap.get(party.pid)
       const isHost = party.role === "host"
+      const status = getPartyStatus(party.appointmentTime, party.locationData)
 
       return {
         ...party,
+        status,
         role: isHost ? "host" : "player",
-        arrived: isHost
+        arrived: status === "cancelled"
+          ? false
+          : isHost
           ? true
           : Boolean(selfJoin?.confirmed_arrival || selfJoin?.checked_in_at),
         joinStatus: selfJoin?.status ?? party.joinStatus,
       }
     })
+    .filter((party) => party.status === "completed" || party.status === "cancelled")
     .sort(
       (a, b) =>
         new Date(b.appointmentTime).getTime() -

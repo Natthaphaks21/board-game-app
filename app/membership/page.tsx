@@ -36,48 +36,48 @@ import { toast } from 'sonner'
 const plans = [
   {
     id: 'basic' as SubscriptionPlan,
-    name: 'Basic',
-    price: 199,
+    name: 'Small',
+    price: 299,
     slots: 3,
     icon: Sparkles,
     color: 'text-chart-4',
     bgColor: 'bg-chart-4/10',
     features: [
-      'Borrow up to 3 games per month',
+      'Borrow up to 3 games concurrently',
       'Access to standard game library',
-      'Basic member badge',
+      'Small pass member badge',
       'Priority party notifications',
     ],
   },
   {
     id: 'pro' as SubscriptionPlan,
-    name: 'Pro',
-    price: 349,
+    name: 'Medium',
+    price: 499,
     slots: 5,
     icon: Zap,
     color: 'text-primary',
     bgColor: 'bg-primary/10',
     popular: true,
     features: [
-      'Borrow up to 5 games per month',
+      'Borrow up to 5 games concurrently',
       'Access to premium game library',
-      'Pro member badge',
+      'Medium pass member badge',
       'Priority party notifications',
       'Early access to new games',
     ],
   },
   {
     id: 'premium' as SubscriptionPlan,
-    name: 'Premium',
-    price: 499,
-    slots: 7,
+    name: 'Large',
+    price: 699,
+    slots: 8,
     icon: Crown,
     color: 'text-accent',
     bgColor: 'bg-accent/10',
     features: [
-      'Borrow up to 7 games per month',
+      'Borrow up to 8 games concurrently',
       'Access to entire game library',
-      'Premium member badge',
+      'Large pass member badge',
       'Priority party notifications',
       'Early access to new games',
       'Exclusive member events',
@@ -130,13 +130,17 @@ export default function MembershipPage() {
     setShowPayment(true)
   }
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     if (selectedPlan) {
-      subscribe(selectedPlan.id)
-      toast.success(`Welcome to ${selectedPlan.name} membership!`)
-      setShowPayment(false)
-      setSelectedPlan(null)
-      router.push('/game-slots')
+      try {
+        await subscribe(selectedPlan.id)
+        toast.success(`Welcome to ${selectedPlan.name} membership!`)
+        setShowPayment(false)
+        setSelectedPlan(null)
+        router.push('/game-slots')
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to activate membership")
+      }
     }
   }
 

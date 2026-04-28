@@ -82,9 +82,9 @@ export default function ProfilePage() {
 
   const planDetails = {
     free: { name: 'Free', slots: 0, color: 'bg-muted' },
-    basic: { name: 'Basic', slots: 3, color: 'bg-chart-2' },
-    pro: { name: 'Pro', slots: 5, color: 'bg-primary' },
-    premium: { name: 'Premium', slots: 7, color: 'bg-accent' },
+    basic: { name: 'Small', slots: 3, color: 'bg-chart-2' },
+    pro: { name: 'Medium', slots: 5, color: 'bg-primary' },
+    premium: { name: 'Large', slots: 8, color: 'bg-accent' },
   }
 
   const currentPlan = planDetails[user.subscription]

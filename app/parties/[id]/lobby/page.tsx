@@ -68,6 +68,7 @@ interface PartyDetail {
   }
   members: Member[]
   pendingRequests: PendingRequest[]
+  status?: "upcoming" | "ongoing" | "completed" | "cancelled"
 }
 
 interface ChatMessage {
@@ -174,6 +175,7 @@ export default function PartyLobbyPage() {
 
   const canCheckIn = useMemo(() => {
     if (!party) return false
+    if (party.status === "cancelled") return false
     if (party.isHost) return false
     return !party.hasArrived
   }, [party])
@@ -329,6 +331,9 @@ export default function PartyLobbyPage() {
                     </div>
                     <div>
                       <h1 className="text-3xl font-bold text-foreground">{party.name}</h1>
+                      {party.status === "cancelled" ? (
+                        <p className="text-sm text-destructive">This party has been cancelled by the host.</p>
+                      ) : null}
                       <p className="text-muted-foreground">Party Lobby</p>
                     </div>
                   </div>
@@ -453,7 +458,7 @@ export default function PartyLobbyPage() {
                   </CardContent>
                 </Card>
 
-                {party.isHost && party.pendingRequests.length > 0 ? (
+                {party.isHost && party.status !== "cancelled" && party.pendingRequests.length > 0 ? (
                   <Card>
                     <CardHeader>
                       <CardTitle>Pending Requests ({party.pendingRequests.length})</CardTitle>

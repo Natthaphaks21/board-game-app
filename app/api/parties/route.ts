@@ -5,6 +5,7 @@ import {
 } from "@/lib/backend/app-service"
 import {
   getCurrentAppUserId,
+  getPartyStatus,
   mapPartiesToList,
 } from "@/lib/backend/party-data"
 
@@ -86,8 +87,15 @@ export async function GET(request: Request) {
     currentAppUserId
   )
 
+  const parties = mappedParties
+    .map((party) => ({
+      ...party,
+      status: getPartyStatus(party.appointmentTime, party.locationData),
+    }))
+    .filter((party) => party.status !== "completed" && party.status !== "cancelled")
+
   return NextResponse.json({
-    parties: mappedParties,
+    parties,
   })
 }
 

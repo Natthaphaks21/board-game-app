@@ -1,4 +1,5 @@
 export type JoinStatus = "pending" | "accepted" | "rejected"
+export type PartyStatus = "upcoming" | "ongoing" | "completed" | "cancelled"
 
 interface PartyRow {
   pid: number
@@ -375,18 +376,29 @@ export async function mapPartyToDetail(
   }
 }
 
-export function getPartyStatus(appointmentTime: string): "upcoming" | "ongoing" | "completed" {
+export function isPartyCancelled(locationData: unknown): boolean {
+  const parsed = safeObject(locationData)
+  return typeof parsed.cancelledAt === "string" && parsed.cancelledAt.trim().length > 0
+}
+
+export function getPartyStatus(
+  appointmentTime: string,
+  locationData?: unknown
+): PartyStatus {
+  if (isPartyCancelled(locationData)) return "cancelled"
+
   const now = Date.now()
   const start = new Date(appointmentTime).getTime()
 
   if (!Number.isFinite(start)) return "upcoming"
 
-  if (start < now) {
-    return "completed"
+  // Treat session as ongoing for 3 hours after appointment time.
+  if (start <= now && start > now - 3 * 60 * 60 * 1000) {
+    return "ongoing"
   }
 
-  if (start <= now + 60 * 60 * 1000) {
-    return "ongoing"
+  if (start <= now - 3 * 60 * 60 * 1000) {
+    return "completed"
   }
 
   return "upcoming"

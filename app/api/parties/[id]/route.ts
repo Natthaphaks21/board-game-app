@@ -60,7 +60,7 @@ export async function GET(
     currentAppUserId
   )
 
-  const status = getPartyStatus(detail.appointmentTime)
+  const lifecycleStatus = getPartyStatus(detail.appointmentTime, detail.locationData)
   const isHost =
     typeof currentAppUserId === "number" &&
     currentAppUserId === (partyRow.host_id ?? -1)
@@ -68,7 +68,7 @@ export async function GET(
   return NextResponse.json({
     party: {
       ...detail,
-      status,
+      status: lifecycleStatus,
       isHost,
       pendingRequests: isHost ? detail.pendingRequests : [],
     },

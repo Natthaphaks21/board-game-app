@@ -42,7 +42,7 @@ interface AuthContextType {
   logout: () => Promise<void>
   refreshUser: () => Promise<User | null>
   updateProfile: (data: Partial<User>) => Promise<void>
-  subscribe: (plan: SubscriptionPlan) => void
+  subscribe: (plan: SubscriptionPlan) => Promise<void>
   cancelSubscription: () => void
   useSlot: () => boolean
   returnSlot: () => void
@@ -54,7 +54,7 @@ const SLOT_BY_PLAN: Record<SubscriptionPlan, number> = {
   free: 0,
   basic: 3,
   pro: 5,
-  premium: 7,
+  premium: 8,
 }
 
 const ENTITLEMENT_PREFIX = "boardbuddies_entitlements_"
@@ -83,6 +83,16 @@ interface MeApiResponse {
 
 function getEntitlementKey(authId: string) {
   return `${ENTITLEMENT_PREFIX}${authId}`
+}
+
+function normalizePlan(value: unknown): SubscriptionPlan {
+  if (value === "basic" || value === "pro" || value === "premium" || value === "free") {
+    return value
+  }
+  if (value === "small") return "basic"
+  if (value === "medium") return "pro"
+  if (value === "large") return "premium"
+  return "free"
 }
 
 function readEntitlements(authId: string): EntitlementState {
@@ -161,7 +171,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const entitlements = readEntitlements(authUser.id)
-    const slots = SLOT_BY_PLAN[entitlements.subscriptionPlan]
+    const metadataPlan = normalizePlan(authUser.metadata?.subscription_plan)
+    const subscriptionPlan =
+      metadataPlan !== "free" ? metadataPlan : entitlements.subscriptionPlan
+    const normalizedUsedSlots = Number(entitlements.usedSlots ?? 0)
 
     const fullName = String(authUser.metadata?.name ?? "")
     const [first, ...rest] = fullName.split(" ").filter(Boolean)
@@ -180,12 +193,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       googleAuthId: profile?.googleAuthId ?? undefined,
       avatar: String(authUser.metadata?.avatar_url ?? ""),
       isProfileComplete: Boolean(profile?.uid),
-      isMember: entitlements.subscriptionPlan !== "free",
-      subscriptionPlan: entitlements.subscriptionPlan,
-      subscription: entitlements.subscriptionPlan,
+      isMember: subscriptionPlan !== "free",
+      subscriptionPlan,
+      subscription: subscriptionPlan,
       subscriptionDate: entitlements.subscriptionDate,
-      gameSlots: slots,
-      usedSlots: Math.min(entitlements.usedSlots, slots),
+      gameSlots: SLOT_BY_PLAN[subscriptionPlan],
+      usedSlots: Math.min(
+        Number.isFinite(normalizedUsedSlots) ? normalizedUsedSlots : 0,
+        SLOT_BY_PLAN[subscriptionPlan]
+      ),
       phone: String(authUser.metadata?.phone ?? ""),
       address: String(authUser.metadata?.address ?? ""),
       dateOfBirth: String(authUser.metadata?.dateOfBirth ?? ""),
@@ -293,30 +309,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const subscribe = useCallback((plan: SubscriptionPlan) => {
-    const slots = SLOT_BY_PLAN[plan]
-    setUser((prev) => {
-      if (!prev) return null
-      const usedSlots = Math.min(prev.usedSlots, slots)
-      const updated = {
-        ...prev,
-        subscriptionPlan: plan,
-        subscription: plan,
-        gameSlots: slots,
-        usedSlots,
-        isMember: plan !== "free",
-        subscriptionDate: new Date().toISOString(),
-      }
-
-      writeEntitlements(prev.authId, {
-        subscriptionPlan: plan,
-        usedSlots,
-        subscriptionDate: updated.subscriptionDate,
+  const subscribe = useCallback(
+    async (plan: SubscriptionPlan) => {
+      const response = await fetch("/api/membership/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
       })
 
-      return updated
-    })
-  }, [])
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null
+        throw new Error(payload?.error ?? "Unable to activate membership")
+      }
+
+      await refreshUser()
+
+      setUser((prev) => {
+        if (!prev) return prev
+        writeEntitlements(prev.authId, {
+          subscriptionPlan: plan,
+          usedSlots: prev.usedSlots,
+          subscriptionDate: new Date().toISOString(),
+        })
+        return prev
+      })
+    },
+    [refreshUser]
+  )
 
   const cancelSubscription = useCallback(() => {
     setUser((prev) => {

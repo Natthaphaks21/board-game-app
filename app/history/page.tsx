@@ -32,6 +32,7 @@ interface HistoryParty {
   maxPlayers: number
   games: string[]
   arrived: boolean
+  status?: "completed" | "cancelled"
   host: {
     rating: number
   }
@@ -177,6 +178,9 @@ export default function HistoryPage() {
                         <Badge variant={party.role === "host" ? "default" : "secondary"} className="text-xs">
                           {party.role === "host" ? "Hosted" : "Joined"}
                         </Badge>
+                        {party.status === "cancelled" ? (
+                          <Badge variant="destructive" className="text-xs">Cancelled</Badge>
+                        ) : null}
                       </div>
 
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -210,7 +214,11 @@ export default function HistoryPage() {
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    {party.arrived ? (
+                    {party.status === "cancelled" ? (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Cancelled session
+                      </Badge>
+                    ) : party.arrived ? (
                       <Badge className="gap-1 bg-primary/20 text-primary">
                         <CheckCircle2 className="h-3 w-3" />
                         Attended

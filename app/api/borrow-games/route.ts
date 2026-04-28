@@ -18,6 +18,24 @@ interface PhysicalGameRow {
   board_game_catalogue: CatalogueRow | CatalogueRow[] | null
 }
 
+function normalizePlan(value: unknown): "basic" | "pro" | "premium" | "free" {
+  if (value === "basic" || value === "pro" || value === "premium" || value === "free") {
+    return value
+  }
+  if (value === "small") return "basic"
+  if (value === "medium") return "pro"
+  if (value === "large") return "premium"
+  return "free"
+}
+
+function getBorrowLimit(value: unknown): number {
+  const plan = normalizePlan(value)
+  if (plan === "basic") return 3
+  if (plan === "pro") return 5
+  if (plan === "premium") return 8
+  return 0
+}
+
 function asCatalogue(row: PhysicalGameRow): CatalogueRow | null {
   if (!row.board_game_catalogue) return null
   if (Array.isArray(row.board_game_catalogue)) {
@@ -68,6 +86,7 @@ export async function GET() {
   }
 
   const memberUid = await getMemberUid(supabase, user.id)
+  const borrowLimit = getBorrowLimit(user.user_metadata?.subscription_plan)
 
   const { data: physicalRows, error } = await supabase
     .from("physical_board_games")
@@ -137,6 +156,7 @@ export async function GET() {
 
   return NextResponse.json({
     isMember: Boolean(memberUid),
+    borrowLimit,
     borrowedGames,
     availableGames,
   })
@@ -153,8 +173,9 @@ export async function POST(request: Request) {
   }
 
   const memberUid = await getMemberUid(supabase, user.id)
+  const borrowLimit = getBorrowLimit(user.user_metadata?.subscription_plan)
 
-  if (!memberUid) {
+  if (!memberUid || borrowLimit <= 0) {
     return NextResponse.json(
       { error: "Membership is required before borrowing games." },
       { status: 403 }
@@ -176,7 +197,7 @@ export async function POST(request: Request) {
     .eq("borrower_id", memberUid)
     .eq("status", "lended")
 
-  if ((currentlyBorrowed ?? []).length >= 12) {
+  if ((currentlyBorrowed ?? []).length >= borrowLimit) {
     return NextResponse.json(
       { error: "Borrowing limit reached. Please return a game first." },
       { status: 400 }

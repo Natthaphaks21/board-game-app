@@ -250,6 +250,25 @@ VALUES
     (SELECT host_uid FROM host_pick),
     NOW() - INTERVAL '3 days',
     NOW() - INTERVAL '6 days'
+  ),
+  (
+    9107,
+    'Cancelled Meetup Demo',
+    jsonb_build_object(
+      'displayName', 'Old Town Board Bar',
+      'formattedAddress', 'Ratchadaphisek Rd, Bangkok',
+      'venueType', 'bar',
+      'description', 'This demo party is intentionally cancelled.',
+      'tags', jsonb_build_array('Demo', 'Cancelled'),
+      'selectedGames', jsonb_build_array('Azul'),
+      'maxPlayers', 4,
+      'isManuallyEntered', true,
+      'cancelledAt', NOW() - INTERVAL '2 hours',
+      'cancelReason', 'Host emergency'
+    ),
+    (SELECT host_uid FROM host_pick),
+    NOW() + INTERVAL '1 day',
+    NOW() - INTERVAL '1 day'
   )
 ON CONFLICT (pid) DO UPDATE
 SET
@@ -285,6 +304,7 @@ VALUES
   (9104, (SELECT uid FROM player_a), NOW() - INTERVAL '2 hours', 'accepted', NULL, false),
   (9104, (SELECT uid FROM player_b), NOW() - INTERVAL '90 minutes', 'pending', NULL, false),
   (9105, (SELECT uid FROM player_b), NOW() - INTERVAL '1 hour', 'accepted', NULL, false),
+  (9107, (SELECT uid FROM player_a), NOW() - INTERVAL '3 hours', 'accepted', NULL, false),
   (9103, (SELECT uid FROM player_a), NOW() - INTERVAL '8 days', 'accepted', NOW() - INTERVAL '7 days', true),
   (9103, (SELECT uid FROM player_b), NOW() - INTERVAL '8 days', 'accepted', NULL, false),
   (9106, (SELECT uid FROM player_a), NOW() - INTERVAL '4 days', 'accepted', NOW() - INTERVAL '3 days', true),
@@ -307,7 +327,7 @@ BEGIN
     WHERE table_schema = 'public' AND table_name = 'party_messages'
   ) THEN
     DELETE FROM public.party_messages
-    WHERE party_id IN (9101, 9102, 9104, 9105, 9106);
+    WHERE party_id IN (9101, 9102, 9104, 9105, 9106, 9107);
 
     INSERT INTO public.party_messages (party_id, sender_id, sender_name, message, created_at)
     VALUES
@@ -318,7 +338,8 @@ BEGIN
       (9104, 9002, 'demo_player_a', 'Perfect, I will arrive a bit early.', NOW() - INTERVAL '95 minutes'),
       (9105, 9001, 'demo_host', 'This one is beginner friendly for family players.', NOW() - INTERVAL '50 minutes'),
       (9106, 9002, 'demo_player_a', 'Great session yesterday, thanks host!', NOW() - INTERVAL '2 days'),
-      (9106, 9003, 'demo_player_b', 'Let us do another strategy night next month.', NOW() - INTERVAL '2 days');
+      (9106, 9003, 'demo_player_b', 'Let us do another strategy night next month.', NOW() - INTERVAL '2 days'),
+      (9107, 9001, 'demo_host', 'Sorry team, this room is cancelled due to emergency.', NOW() - INTERVAL '2 hours');
   END IF;
 END $$;
 

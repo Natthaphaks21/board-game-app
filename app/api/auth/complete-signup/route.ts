@@ -10,6 +10,8 @@ interface SignupPayload {
   name?: string
   surname?: string
   username?: string
+  phone?: string
+  address?: string
   password?: string
   thaiCitizenId?: string
 }
@@ -48,12 +50,21 @@ export async function POST(request: Request) {
   const name = clean(payload.name, 30)
   const surname = clean(payload.surname, 30)
   const username = clean(payload.username, 30)
+  const phone = clean(payload.phone, 20)
+  const address = clean(payload.address, 180)
   const password = clean(payload.password, 72)
   const thaiCitizenId = clean(payload.thaiCitizenId, 13).replace(/\D/g, "")
 
   if (!name || !surname || username.length < 3) {
     return NextResponse.json(
       { error: "Name, surname, and username are required." },
+      { status: 400 }
+    )
+  }
+
+  if (phone.length < 9 || address.length < 8) {
+    return NextResponse.json(
+      { error: "Phone number and address are required." },
       { status: 400 }
     )
   }
@@ -135,6 +146,8 @@ export async function POST(request: Request) {
       username,
       given_name: name,
       family_name: surname,
+      phone,
+      address,
     },
   })
 

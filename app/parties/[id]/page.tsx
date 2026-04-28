@@ -56,6 +56,7 @@ interface PartyDetail {
     googleMapsUri?: string
   }
   members: PartyMember[]
+  status?: "upcoming" | "ongoing" | "completed" | "cancelled"
 }
 
 export default function PartyDetailPage() {
@@ -66,6 +67,7 @@ export default function PartyDetailPage() {
   const [party, setParty] = useState<PartyDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -102,10 +104,51 @@ export default function PartyDetailPage() {
 
   const canCheckIn = useMemo(() => {
     if (!party) return false
+    if (party.status === "cancelled") return false
     if (party.isHost) return false
     if (party.joinStatus !== "accepted") return false
     return !party.hasArrived
   }, [party])
+
+  const handleCancelParty = async () => {
+    if (!party?.isHost) return
+    setIsSubmittingAction(true)
+    try {
+      const response = await fetch(`/api/parties/${params.id}/cancel`, {
+        method: "POST",
+      })
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to cancel party")
+      }
+      setParty((prev) => (prev ? { ...prev, status: "cancelled" } : prev))
+      toast.success("Party cancelled")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to cancel party")
+    } finally {
+      setIsSubmittingAction(false)
+    }
+  }
+
+  const handleLeaveParty = async () => {
+    if (party?.isHost) return
+    setIsSubmittingAction(true)
+    try {
+      const response = await fetch(`/api/parties/${params.id}/leave`, {
+        method: "POST",
+      })
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to leave party")
+      }
+      toast.success("You left the party")
+      router.push("/my-parties")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to leave party")
+    } finally {
+      setIsSubmittingAction(false)
+    }
+  }
 
   const handleArrivalConfirm = async () => {
     const partyId = params.id
@@ -176,9 +219,12 @@ export default function PartyDetailPage() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
                       <DiceIcon className="h-10 w-10 text-primary" />
                     </div>
-                    <div>
-                      <h1 className="text-2xl font-bold">{party.name}</h1>
-                      <div className="mt-2 flex items-center gap-2">
+                      <div>
+                        <h1 className="text-2xl font-bold">{party.name}</h1>
+                        {party.status === "cancelled" ? (
+                          <p className="text-sm text-destructive">This party has been cancelled by host.</p>
+                        ) : null}
+                        <div className="mt-2 flex items-center gap-2">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback>{party.host.name.charAt(0)}</AvatarFallback>
                         </Avatar>
@@ -337,6 +383,25 @@ export default function PartyDetailPage() {
                   <Button variant="outline" className="flex-1 gap-2" disabled>
                     <Navigation className="h-4 w-4" />
                     Get Directions
+                  </Button>
+                )}
+                {party.isHost ? (
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={handleCancelParty}
+                    disabled={isSubmittingAction || party.status === "cancelled"}
+                  >
+                    Cancel Party
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleLeaveParty}
+                    disabled={isSubmittingAction || party.status === "cancelled"}
+                  >
+                    Leave Party
                   </Button>
                 )}
               </CardContent>
