@@ -18,6 +18,7 @@ import {
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon } from "@/components/icons/dice-icon"
+import { getGameImageByName } from "@/lib/game-images"
 import {
   Search,
   MapPin,
@@ -30,6 +31,7 @@ import {
   Gamepad2,
   ArrowLeft,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -255,9 +257,22 @@ export default function JoinPartyPage() {
                   <CardContent className="p-5 sm:p-6">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                          <DiceIcon className="h-10 w-10 text-primary" />
-                        </div>
+                        {getGameImageByName(party.games[0] ?? "") ? (
+                          <img
+                            src={getGameImageByName(party.games[0] ?? "") ?? ""}
+                            alt={party.games[0] ?? party.name}
+                            className="h-16 w-16 rounded-2xl object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                            {party.games[0] ? (
+                              <ImageIcon className="h-8 w-8 text-primary" />
+                            ) : (
+                              <DiceIcon className="h-10 w-10 text-primary" />
+                            )}
+                          </div>
+                        )}
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-lg font-bold">{party.name}</h3>

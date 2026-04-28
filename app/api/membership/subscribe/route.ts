@@ -37,7 +37,11 @@ export async function POST(request: Request) {
     )
   }
 
-  const nowIso = new Date().toISOString()
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const expiresAtIso = new Date(
+    now.getTime() + 30 * 24 * 60 * 60 * 1000
+  ).toISOString()
 
   const { error: memberError } = await supabase
     .from("members")
@@ -60,6 +64,7 @@ export async function POST(request: Request) {
     data: {
       subscription_plan: plan,
       subscription_date: nowIso,
+      subscription_expires_at: expiresAtIso,
     },
   })
 
@@ -74,5 +79,6 @@ export async function POST(request: Request) {
     success: true,
     plan,
     subscribedAt: nowIso,
+    expiresAt: expiresAtIso,
   })
 }

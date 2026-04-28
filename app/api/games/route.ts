@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getGameImageByName } from "@/lib/game-images"
 
 export async function GET() {
   const supabase = await createClient()
@@ -22,17 +23,18 @@ export async function GET() {
 
   return NextResponse.json({
     games: (games ?? []).map((game) => ({
+      imageUrl:
+        game.cover_image_path
+          ? /^https?:\/\//i.test(game.cover_image_path)
+            ? game.cover_image_path
+            : supabase.storage
+                .from("boardgame-covers")
+                .getPublicUrl(game.cover_image_path).data.publicUrl
+          : getGameImageByName(game.game_name),
       id: String(game.catalogue_id),
       name: game.game_name,
       category: game.category ?? "Board Game",
       imagePath: game.cover_image_path ?? null,
-      imageUrl: game.cover_image_path
-        ? /^https?:\/\//i.test(game.cover_image_path)
-          ? game.cover_image_path
-          : supabase.storage
-              .from("boardgame-covers")
-              .getPublicUrl(game.cover_image_path).data.publicUrl
-        : null,
     })),
   })
 }

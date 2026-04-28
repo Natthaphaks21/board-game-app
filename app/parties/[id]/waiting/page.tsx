@@ -358,7 +358,7 @@ export default function WaitingRoomPage() {
                     <MessageCircle className="h-4 w-4 text-primary" />
                     Message Host
                   </div>
-                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border p-2">
+                  <div className="max-h-72 space-y-2 overflow-y-auto rounded-md border border-border p-2">
                     {isLoadingChat ? (
                       <p className="text-xs text-muted-foreground">Loading chat...</p>
                     ) : messages.length === 0 ? (

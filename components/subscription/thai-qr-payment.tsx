@@ -94,22 +94,15 @@ export function ThaiQRPayment({ open, onOpenChange, plan, onPaymentSuccess }: Th
   // Simulate payment check (in production, this would poll the server or use webhooks)
   const checkPayment = async () => {
     setStatus('checking')
-    
-    // Simulate API call
+
+    // Demo mode: always confirm after user clicks the button.
     await new Promise((resolve) => setTimeout(resolve, 2000))
-    
-    // For demo: randomly succeed or stay pending
-    const success = Math.random() > 0.3
-    
-    if (success) {
-      setStatus('success')
-      setTimeout(() => {
-        onPaymentSuccess()
-        onOpenChange(false)
-      }, 2000)
-    } else {
-      setStatus('pending')
-    }
+
+    setStatus('success')
+    setTimeout(() => {
+      onPaymentSuccess()
+      onOpenChange(false)
+    }, 1500)
   }
 
   const formatTime = (seconds: number) => {

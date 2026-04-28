@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentAppUserId } from "@/lib/backend/party-data"
+import { getGameImageByName } from "@/lib/game-images"
 
 interface CatalogueRow {
   catalogue_id: number
@@ -46,16 +47,17 @@ function asCatalogue(row: PhysicalGameRow): CatalogueRow | null {
 
 function resolveCoverUrl(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  path: string | null
+  path: string | null,
+  gameName?: string
 ): string | null {
-  if (!path) return null
+  if (!path) return getGameImageByName(gameName ?? "")
 
   if (/^https?:\/\//i.test(path)) {
     return path
   }
 
   const { data } = supabase.storage.from("boardgame-covers").getPublicUrl(path)
-  return data.publicUrl || null
+  return data.publicUrl || getGameImageByName(gameName ?? "")
 }
 
 async function getMemberUid(
@@ -114,7 +116,11 @@ export async function GET() {
         name: catalogue?.game_name ?? "Unknown Game",
         category: catalogue?.category ?? "Board Game",
         imagePath: catalogue?.cover_image_path ?? null,
-        imageUrl: resolveCoverUrl(supabase, catalogue?.cover_image_path ?? null),
+        imageUrl: resolveCoverUrl(
+          supabase,
+          catalogue?.cover_image_path ?? null,
+          catalogue?.game_name
+        ),
         available: true,
       }
     })
@@ -138,7 +144,11 @@ export async function GET() {
             name: catalogue?.game_name ?? "Unknown Game",
             category: catalogue?.category ?? "Board Game",
             imagePath: catalogue?.cover_image_path ?? null,
-            imageUrl: resolveCoverUrl(supabase, catalogue?.cover_image_path ?? null),
+            imageUrl: resolveCoverUrl(
+              supabase,
+              catalogue?.cover_image_path ?? null,
+              catalogue?.game_name
+            ),
             borrowedAt: borrowedAtIso,
             borrowedDate: borrowedAt.toLocaleDateString("en-US", {
               year: "numeric",

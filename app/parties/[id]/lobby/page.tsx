@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon } from "@/components/icons/dice-icon"
+import { getGameImageByName } from "@/lib/game-images"
+import { cn } from "@/lib/utils"
 import {
   MapPin,
   Calendar,
@@ -27,6 +29,8 @@ import {
   Loader2,
   XCircle,
   Send,
+  Maximize2,
+  Minimize2,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -106,6 +110,7 @@ export default function PartyLobbyPage() {
   const [chatUnavailable, setChatUnavailable] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingChat, setIsSendingChat] = useState(false)
+  const [isChatExpanded, setIsChatExpanded] = useState(false)
 
   const loadParty = async () => {
     const partyId = params.id
@@ -433,7 +438,17 @@ export default function PartyLobbyPage() {
                         <p className="text-sm text-muted-foreground">Games</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           {party.games.map((game) => (
-                            <Badge key={game} variant="outline">{game}</Badge>
+                            <div key={game} className="flex items-center gap-2 rounded-full border border-border px-2 py-1">
+                              {getGameImageByName(game) ? (
+                                <img
+                                  src={getGameImageByName(game) ?? ""}
+                                  alt={game}
+                                  className="h-5 w-5 rounded-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : null}
+                              <span className="text-sm font-medium">{game}</span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -603,16 +618,46 @@ export default function PartyLobbyPage() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card
+                  className={cn(
+                    isChatExpanded
+                      ? "fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-4xl rounded-t-2xl border-2 shadow-2xl"
+                      : ""
+                  )}
+                >
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageCircle className="h-5 w-5 text-primary" />
-                      Party Chat
+                    <CardTitle className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <MessageCircle className="h-5 w-5 text-primary" />
+                        Party Chat
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsChatExpanded((prev) => !prev)}
+                      >
+                        {isChatExpanded ? (
+                          <>
+                            <Minimize2 className="mr-2 h-4 w-4" />
+                            Collapse
+                          </>
+                        ) : (
+                          <>
+                            <Maximize2 className="mr-2 h-4 w-4" />
+                            Expand
+                          </>
+                        )}
+                      </Button>
                     </CardTitle>
                     <CardDescription>Host and participants can message here</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border border-border p-3">
+                    <div
+                      className={cn(
+                        "space-y-2 overflow-y-auto rounded-lg border border-border p-3",
+                        isChatExpanded ? "h-[52vh]" : "max-h-72"
+                      )}
+                    >
                       {isLoadingChat ? (
                         <p className="text-sm text-muted-foreground">Loading chat...</p>
                       ) : chatUnavailable ? (
@@ -672,6 +717,14 @@ export default function PartyLobbyPage() {
                 </Card>
               </div>
             </div>
+            {isChatExpanded ? (
+              <button
+                type="button"
+                className="fixed inset-0 z-40 bg-black/40"
+                onClick={() => setIsChatExpanded(false)}
+                aria-label="Close expanded chat overlay"
+              />
+            ) : null}
           </>
         )}
       </main>

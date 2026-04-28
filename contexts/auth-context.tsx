@@ -25,6 +25,7 @@ export interface User {
   isProfileComplete: boolean
   isMember: boolean
   subscriptionDate?: string
+  subscriptionExpiresAt?: string
   subscriptionPlan: SubscriptionPlan
   subscription: SubscriptionPlan
   gameSlots: number
@@ -63,6 +64,7 @@ interface EntitlementState {
   subscriptionPlan: SubscriptionPlan
   usedSlots: number
   subscriptionDate?: string
+  subscriptionExpiresAt?: string
 }
 
 interface MeApiResponse {
@@ -113,6 +115,7 @@ function readEntitlements(authId: string): EntitlementState {
       subscriptionPlan: plan,
       usedSlots: Number.isFinite(usedSlots) ? Math.max(0, usedSlots) : 0,
       subscriptionDate: parsed.subscriptionDate,
+      subscriptionExpiresAt: parsed.subscriptionExpiresAt,
     }
   } catch {
     return fallback
@@ -121,6 +124,28 @@ function readEntitlements(authId: string): EntitlementState {
 
 function writeEntitlements(authId: string, entitlements: EntitlementState) {
   localStorage.setItem(getEntitlementKey(authId), JSON.stringify(entitlements))
+}
+
+function isFutureIso(value: string | undefined): boolean {
+  if (!value) return false
+  const ts = new Date(value).getTime()
+  return Number.isFinite(ts) && ts > Date.now()
+}
+
+function clearLocalAuthCache(authId?: string) {
+  if (typeof window === "undefined") return
+
+  if (authId) {
+    localStorage.removeItem(getEntitlementKey(authId))
+  }
+
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith(ENTITLEMENT_PREFIX) || key.startsWith("sb-")) {
+      localStorage.removeItem(key)
+    }
+  }
+
+  sessionStorage.clear()
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -172,8 +197,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const entitlements = readEntitlements(authUser.id)
     const metadataPlan = normalizePlan(authUser.metadata?.subscription_plan)
-    const subscriptionPlan =
-      metadataPlan !== "free" ? metadataPlan : entitlements.subscriptionPlan
+    const metadataSubscriptionDate =
+      typeof authUser.metadata?.subscription_date === "string"
+        ? authUser.metadata.subscription_date
+        : undefined
+    const metadataSubscriptionExpiresAt =
+      typeof authUser.metadata?.subscription_expires_at === "string"
+        ? authUser.metadata.subscription_expires_at
+        : undefined
+
+    const localPlan = normalizePlan(entitlements.subscriptionPlan)
+    const localIsActive =
+      localPlan !== "free" &&
+      (isFutureIso(entitlements.subscriptionExpiresAt) ||
+        !entitlements.subscriptionExpiresAt)
+    const metadataIsActive =
+      metadataPlan !== "free" &&
+      (isFutureIso(metadataSubscriptionExpiresAt) ||
+        !metadataSubscriptionExpiresAt)
+
+    const subscriptionPlan = metadataIsActive
+      ? metadataPlan
+      : localIsActive
+        ? localPlan
+        : "free"
+
+    const subscriptionDate = metadataIsActive
+      ? metadataSubscriptionDate
+      : localIsActive
+        ? entitlements.subscriptionDate
+        : undefined
+    const subscriptionExpiresAt = metadataIsActive
+      ? metadataSubscriptionExpiresAt
+      : localIsActive
+        ? entitlements.subscriptionExpiresAt
+        : undefined
     const normalizedUsedSlots = Number(entitlements.usedSlots ?? 0)
 
     const fullName = String(authUser.metadata?.name ?? "")
@@ -196,7 +254,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMember: subscriptionPlan !== "free",
       subscriptionPlan,
       subscription: subscriptionPlan,
-      subscriptionDate: entitlements.subscriptionDate,
+      subscriptionDate,
+      subscriptionExpiresAt,
       gameSlots: SLOT_BY_PLAN[subscriptionPlan],
       usedSlots: Math.min(
         Number.isFinite(normalizedUsedSlots) ? normalizedUsedSlots : 0,
@@ -274,14 +333,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase])
 
   const logout = useCallback(async () => {
+    const authId = user?.authId
+
     if (!supabase) {
+      clearLocalAuthCache(authId)
       setUser(null)
       return
     }
 
     await supabase.auth.signOut()
+    clearLocalAuthCache(authId)
     setUser(null)
-  }, [supabase])
+  }, [supabase, user?.authId])
 
   const updateProfile = useCallback(async (data: Partial<User>) => {
     const response = await fetch("/api/auth/profile", {
@@ -328,10 +391,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser((prev) => {
         if (!prev) return prev
+        const now = new Date()
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
         writeEntitlements(prev.authId, {
           subscriptionPlan: plan,
           usedSlots: prev.usedSlots,
-          subscriptionDate: new Date().toISOString(),
+          subscriptionDate: now.toISOString(),
+          subscriptionExpiresAt: expiresAt,
         })
         return prev
       })
@@ -355,6 +422,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       writeEntitlements(prev.authId, {
         subscriptionPlan: "free",
         usedSlots: 0,
+        subscriptionDate: undefined,
+        subscriptionExpiresAt: undefined,
       })
 
       return updated
@@ -376,6 +445,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscriptionPlan: prev.subscriptionPlan,
         usedSlots: updated.usedSlots,
         subscriptionDate: prev.subscriptionDate,
+        subscriptionExpiresAt: prev.subscriptionExpiresAt,
       })
 
       return updated
@@ -393,6 +463,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscriptionPlan: prev.subscriptionPlan,
         usedSlots: updated.usedSlots,
         subscriptionDate: prev.subscriptionDate,
+        subscriptionExpiresAt: prev.subscriptionExpiresAt,
       })
 
       return updated

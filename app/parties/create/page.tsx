@@ -30,15 +30,16 @@ import {
   X,
   Gamepad2,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Image as ImageIcon
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const fallbackGames = [
-  { id: 'fallback-1', name: 'Catan' },
-  { id: 'fallback-2', name: 'Ticket to Ride' },
-  { id: 'fallback-3', name: 'Codenames' },
-  { id: 'fallback-4', name: 'Wingspan' },
+  { id: 'fallback-1', name: 'Catan', imageUrl: 'https://images.unsplash.com/photo-1632501641765-e568d28b0015?auto=format&fit=crop&w=200&q=80' },
+  { id: 'fallback-2', name: 'Ticket to Ride', imageUrl: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=200&q=80' },
+  { id: 'fallback-3', name: 'Codenames', imageUrl: 'https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=200&q=80' },
+  { id: 'fallback-4', name: 'Wingspan', imageUrl: 'https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=200&q=80' },
 ]
 
 const venueTypes = [
@@ -52,6 +53,8 @@ const venueTypes = [
 interface GameOption {
   id: string
   name: string
+  imageUrl?: string | null
+  category?: string
 }
 
 interface PlaceSearchResult {
@@ -672,13 +675,22 @@ export default function CreatePartyPage() {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                            <Gamepad2 className="h-5 w-5 text-secondary-foreground" />
-                          </div>
+                          {game.imageUrl ? (
+                            <img
+                              src={game.imageUrl}
+                              alt={game.name}
+                              className="h-10 w-10 rounded-lg object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                              <ImageIcon className="h-5 w-5 text-secondary-foreground" />
+                            </div>
+                          )}
                           <div className="text-left">
                             <p className="font-medium">{game.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              From Supabase catalogue
+                              {game.category || 'From Supabase catalogue'}
                             </p>
                           </div>
                         </div>

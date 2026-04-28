@@ -77,10 +77,8 @@ export default function GameSlotsPage() {
   useEffect(() => {
     if (!user) {
       router.push('/')
-      return
-    }
-    if (user.subscription === 'free') {
-      router.push('/home')
+    } else if (user.subscription === 'free') {
+      setIsLoading(false)
     }
   }, [user, router])
 
@@ -112,7 +110,7 @@ export default function GameSlotsPage() {
     void loadBorrowData()
   }, [loadBorrowData, user])
 
-  if (!user || user.subscription === 'free') return null
+  if (!user) return null
 
   const slotsUsed = borrowedGames.length
   const totalSlots = user.gameSlots
@@ -224,6 +222,22 @@ export default function GameSlotsPage() {
               <p className="text-sm">
                 Your account is not in `members` table yet. Please insert your `uid` into `members(vid)` in Supabase first.
               </p>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {user.subscription === 'free' ? (
+          <Card className="mb-8 border-2 border-primary/40 bg-primary/5">
+            <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-lg font-semibold">Membership required for borrowing</p>
+                <p className="text-sm text-muted-foreground">
+                  Upgrade to Small, Medium, or Large plan to unlock rental slots.
+                </p>
+              </div>
+              <Button onClick={() => router.push('/membership')}>
+                View Membership Plans
+              </Button>
             </CardContent>
           </Card>
         ) : null}

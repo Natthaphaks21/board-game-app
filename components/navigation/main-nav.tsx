@@ -13,6 +13,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,6 +53,7 @@ const navItems = [
   { href: '/parties/create', label: 'Create Party', icon: Plus },
   { href: '/parties/join', label: 'Join Party', icon: Search },
   { href: '/my-parties', label: 'My Parties', icon: Users },
+  { href: '/game-slots', label: 'Rental', icon: Gamepad2 },
   { href: '/history', label: 'History', icon: History },
 ]
 
@@ -75,6 +86,7 @@ export function MainNav() {
   const { user, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showBenefitsPopup, setShowBenefitsPopup] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -195,8 +207,11 @@ export function MainNav() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Profile Settings</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowLogoutConfirm(true)}
+                    className="text-destructive"
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>
@@ -285,6 +300,26 @@ export function MainNav() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of BoardBuddies?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear your local session cache on this device and return you to login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

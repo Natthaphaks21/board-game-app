@@ -125,6 +125,18 @@ export default function MembershipPage() {
 
   if (!user) return null
 
+  const planExpiresAt = user.subscriptionExpiresAt
+    ? new Date(user.subscriptionExpiresAt)
+    : null
+  const planExpiryText =
+    planExpiresAt && Number.isFinite(planExpiresAt.getTime())
+      ? planExpiresAt.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : null
+
   const handleSelectPlan = (plan: typeof plans[0]) => {
     setSelectedPlan(plan)
     setShowPayment(true)
@@ -195,7 +207,7 @@ export default function MembershipPage() {
                     You&apos;re a {user.subscriptionPlan.charAt(0).toUpperCase() + user.subscriptionPlan.slice(1)} Member
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {user.gameSlots - user.usedSlots} game slots available
+                    {user.gameSlots - user.usedSlots} game slots available{planExpiryText ? ` • valid until ${planExpiryText}` : ''}
                   </p>
                 </div>
               </div>

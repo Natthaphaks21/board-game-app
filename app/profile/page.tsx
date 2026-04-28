@@ -88,6 +88,21 @@ export default function ProfilePage() {
   }
 
   const currentPlan = planDetails[user.subscription]
+  const planExpiresAt = user.subscriptionExpiresAt
+    ? new Date(user.subscriptionExpiresAt)
+    : null
+  const hasValidPlan =
+    user.subscription !== 'free' &&
+    Boolean(planExpiresAt && Number.isFinite(planExpiresAt.getTime()) && planExpiresAt.getTime() > Date.now())
+  const planExpiryText =
+    hasValidPlan && planExpiresAt
+      ? planExpiresAt.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : null
+  const availableSlots = Math.max(0, user.gameSlots - user.usedSlots)
 
   return (
     <div className="min-h-screen bg-background">
@@ -163,9 +178,14 @@ export default function ProfilePage() {
                   </Badge>
                   {user.subscription !== 'free' && (
                     <Badge variant="outline">
-                      {currentPlan.slots} Game Slots
+                      {availableSlots}/{currentPlan.slots} Slots Available
                     </Badge>
                   )}
+                  {planExpiryText ? (
+                    <Badge variant="secondary">
+                      Valid until {planExpiryText}
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
 
@@ -304,7 +324,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-muted-foreground">
                   {user.subscription === 'free'
                     ? 'Upgrade to borrow games and unlock premium features'
-                    : `${currentPlan.slots} game slots per month`}
+                    : `${availableSlots}/${currentPlan.slots} slots available • ${planExpiryText ? `valid until ${planExpiryText}` : 'active plan'}`}
                 </p>
               </div>
               <Button variant={user.subscription === 'free' ? 'default' : 'outline'} asChild>

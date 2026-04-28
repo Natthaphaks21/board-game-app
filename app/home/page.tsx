@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon, MeepleIcon } from "@/components/icons/dice-icon"
+import { getGameImageByName } from "@/lib/game-images"
 import {
   Plus,
   Search,
@@ -201,10 +202,19 @@ export default function HomePage() {
                 onClick={() => router.push(`/parties/${party.id}`)}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                      <DiceIcon className="h-7 w-7 text-primary" />
-                    </div>
+                <div className="flex items-start justify-between">
+                    {getGameImageByName(party.games[0] ?? "") ? (
+                      <img
+                        src={getGameImageByName(party.games[0] ?? "") ?? ""}
+                        alt={party.games[0] ?? party.name}
+                        className="h-12 w-12 rounded-xl object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                        <DiceIcon className="h-7 w-7 text-primary" />
+                      </div>
+                    )}
                     <Badge variant="outline" className="text-xs">
                       {party.players}/{party.maxPlayers}
                     </Badge>

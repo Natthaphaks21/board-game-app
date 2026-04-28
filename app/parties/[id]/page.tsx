@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon } from "@/components/icons/dice-icon"
+import { getGameImageByName } from "@/lib/game-images"
 import {
   MapPin,
   Calendar,
@@ -299,9 +300,19 @@ export default function PartyDetailPage() {
                     <Gamepad2 className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Games</p>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="mt-1 flex flex-wrap gap-2">
                         {party.games.map((game) => (
-                          <Badge key={game}>{game}</Badge>
+                          <div key={game} className="flex items-center gap-2 rounded-full border border-border px-2 py-1">
+                            {getGameImageByName(game) ? (
+                              <img
+                                src={getGameImageByName(game) ?? ""}
+                                alt={game}
+                                className="h-5 w-5 rounded-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : null}
+                            <span className="text-sm font-medium">{game}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
