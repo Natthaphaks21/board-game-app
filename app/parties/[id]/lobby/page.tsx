@@ -265,6 +265,35 @@ export default function PartyLobbyPage() {
     }
   }
 
+  const handleKickMember = async (memberId: number) => {
+    const partyId = params.id
+    if (!partyId) return
+
+    setIsSubmitting(true)
+    try {
+      const response = await fetch(`/api/parties/${partyId}/requests/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "rejected" }),
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to remove member")
+      }
+
+      toast.success("Member removed from room")
+      await loadParty()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to remove member")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleSendChat = async () => {
     const partyId = params.id
     const message = chatInput.trim()
@@ -557,6 +586,17 @@ export default function PartyLobbyPage() {
                               ) : null}
                             </div>
                           )}
+                          {party.isHost && member.role !== "host" ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="mt-2"
+                              onClick={() => handleKickMember(member.uid)}
+                              disabled={isSubmitting || party.status === "cancelled"}
+                            >
+                              Kick
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
                     ))}
