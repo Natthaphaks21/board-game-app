@@ -35,7 +35,7 @@ export async function GET(
 
   const { data: party } = await supabase
     .from("parties")
-    .select("host_id")
+    .select("host_id,appointment_time")
     .eq("pid", partyId)
     .maybeSingle()
 
@@ -44,7 +44,12 @@ export async function GET(
   }
 
   if (party.host_id === currentAppUserId) {
-    return NextResponse.json({ status: "accepted", hasArrived: true, role: "host" })
+    const partyStarted = new Date(party.appointment_time).getTime() <= Date.now()
+    return NextResponse.json({
+      status: "accepted",
+      hasArrived: partyStarted,
+      role: "host",
+    })
   }
 
   const { data: join } = await supabase
@@ -112,7 +117,7 @@ export async function POST(
     )
   }
 
-  if (new Date(party.appointment_time).getTime() < Date.now() - 60 * 60 * 1000) {
+  if (new Date(party.appointment_time).getTime() < Date.now()) {
     return NextResponse.json(
       { error: "This party has already started." },
       { status: 400 }

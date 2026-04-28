@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     .limit(limit)
 
   if (!includePast) {
-    const lowerBound = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+    const lowerBound = new Date().toISOString()
     query = query.gte("appointment_time", lowerBound)
   }
 

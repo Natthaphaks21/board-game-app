@@ -36,7 +36,7 @@ export async function POST(
 
   const { data: party, error: partyError } = await supabase
     .from("parties")
-    .select("host_id")
+    .select("host_id,appointment_time")
     .eq("pid", partyId)
     .maybeSingle()
 
@@ -46,6 +46,14 @@ export async function POST(
 
   if (!party) {
     return NextResponse.json({ error: "Party not found." }, { status: 404 })
+  }
+
+  const partyStart = new Date(party.appointment_time).getTime()
+  if (partyStart > Date.now()) {
+    return NextResponse.json(
+      { error: "Check-in opens when the meeting time starts." },
+      { status: 400 }
+    )
   }
 
   const requestedUserId =

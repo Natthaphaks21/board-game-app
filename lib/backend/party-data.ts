@@ -330,13 +330,15 @@ export async function mapPartyToDetail(
 
   const hostUser = typeof party.host_id === "number" ? userById.get(party.host_id) : null
 
+  const partyStarted = new Date(party.appointment_time).getTime() <= Date.now()
+
   const members = [
     {
       uid: party.host_id ?? 0,
       name: getDisplayName(hostUser),
       username: hostUser?.username ?? null,
       role: "host" as const,
-      arrived: true,
+      arrived: partyStarted,
       joinedAt: party.created_at,
     },
     ...joinRows
@@ -379,7 +381,7 @@ export function getPartyStatus(appointmentTime: string): "upcoming" | "ongoing" 
 
   if (!Number.isFinite(start)) return "upcoming"
 
-  if (start < now - 3 * 60 * 60 * 1000) {
+  if (start < now) {
     return "completed"
   }
 
