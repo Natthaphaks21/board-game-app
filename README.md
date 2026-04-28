@@ -34,6 +34,9 @@ Run SQL in Supabase SQL Editor:
    - game image metadata columns
    - storage bucket + policies for cover images
    - update policy for borrow/return flow
+4. Optional demo/mock data: run `scripts/005_demo_seed_data.sql`
+   - Adds sample users, parties, joins, game catalogue, and borrow inventory
+   - Safe to run multiple times (idempotent updates)
 
 Image storage best practice:
 - Upload image files to Supabase Storage bucket: `boardgame-covers`
@@ -67,3 +70,10 @@ git push -u origin main
 3. Framework preset: Next.js
 4. Add the environment variables above
 5. Deploy
+
+## 7) UI-only demo (no backend)
+
+If you only want to preview feature flow quickly:
+
+- Open `folder_demo/demo-ui.html` in your browser
+- This is mock interface only (no data persistence)

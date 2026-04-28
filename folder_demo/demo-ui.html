@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BoardBuddies Demo UI</title>
+    <style>
+      :root {
+        --bg: #f7f5ef;
+        --card: #ffffff;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --line: #e5e7eb;
+        --brand: #0f766e;
+        --accent: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at top right, #d1fae5, transparent 35%), var(--bg);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .top {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .badge {
+        background: #ecfeff;
+        color: #155e75;
+        border: 1px solid #a5f3fc;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+      }
+      .tabs a {
+        text-decoration: none;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      .tabs a:hover { border-color: var(--brand); }
+      .screen {
+        border: 1px solid var(--line);
+        background: var(--card);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      h2 { margin: 0 0 8px; }
+      p { margin: 0 0 10px; color: var(--muted); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px;
+      }
+      .tile {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: #fff;
+      }
+      .tile h3 { margin: 0 0 6px; font-size: 16px; }
+      .pill {
+        display: inline-block;
+        font-size: 11px;
+        border-radius: 999px;
+        border: 1px solid #cbd5e1;
+        padding: 2px 8px;
+        margin-right: 5px;
+        margin-top: 6px;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-weight: 700;
+      }
+      .btn.primary {
+        background: var(--brand);
+        color: #fff;
+        border-color: var(--brand);
+      }
+      .stat {
+        font-size: 26px;
+        font-weight: 800;
+      }
+      .cover {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        object-fit: cover;
+        border: 1px solid var(--line);
+      }
+      @media (max-width: 640px) {
+        .wrap { padding: 12px; }
+        .screen { padding: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="top">
+        <h1 style="margin:0;">BoardBuddies Demo UI</h1>
+        <span class="badge">Demo Only • Not Production</span>
+      </div>
+
+      <div class="tabs">
+        <a href="#login">Login</a>
+        <a href="#home">Home</a>
+        <a href="#create">Create Party</a>
+        <a href="#join">Join</a>
+        <a href="#myparties">My Parties</a>
+        <a href="#lobby">Lobby</a>
+        <a href="#borrow">Borrow Games</a>
+      </div>
+
+      <section id="login" class="screen">
+        <h2>1) Login + Onboarding</h2>
+        <p>First login via OAuth, then complete profile and set password.</p>
+        <div class="row">
+          <button class="btn primary">Sign Up with Google (First Login)</button>
+          <button class="btn">Login with Email + Password</button>
+          <button class="btn">Onboarding: Thai ID Verification</button>
+        </div>
+      </section>
+
+      <section id="home" class="screen">
+        <h2>2) Home Dashboard</h2>
+        <div class="grid">
+          <div class="tile"><div class="stat">6</div><div>Open Suggestions</div></div>
+          <div class="tile"><div class="stat">3</div><div>Parties Hosted</div></div>
+          <div class="tile"><div class="stat">5</div><div>Parties Joined</div></div>
+          <div class="tile"><div class="stat">80%</div><div>Attendance Rate</div></div>
+        </div>
+      </section>
+
+      <section id="create" class="screen">
+        <h2>3) Create Party (Manual Location Mode)</h2>
+        <p>Google Maps disabled: user types location name/address manually.</p>
+        <div class="grid">
+          <div class="tile">
+            <h3>Party Info</h3>
+            <div class="pill">Strategy</div><div class="pill">Beginner</div>
+          </div>
+          <div class="tile">
+            <h3>Location</h3>
+            <p style="margin:0;">BoardBuddies Cafe, Sukhumvit Rd</p>
+          </div>
+          <div class="tile">
+            <h3>Date & Time</h3>
+            <p style="margin:0;">Friday, 19:00</p>
+          </div>
+          <div class="tile">
+            <h3>Games</h3>
+            <div class="pill">Catan</div><div class="pill">Ticket to Ride</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="join" class="screen">
+        <h2>4) Join Party</h2>
+        <div class="grid">
+          <div class="tile">
+            <h3>Friday Strategy Night</h3>
+            <p>Sukhumvit • 3/6 players</p>
+            <button class="btn primary">Request to Join</button>
+          </div>
+          <div class="tile">
+            <h3>Weekend Party Games</h3>
+            <p>Rama IV • 5/8 players</p>
+            <button class="btn">Requested</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="myparties" class="screen">
+        <h2>5) My Parties + Host Requests</h2>
+        <div class="tile" style="margin-bottom:10px;">
+          <h3>Pending Request: player_one</h3>
+          <div class="row">
+            <span>Wants to join “Friday Strategy Night”</span>
+            <div>
+              <button class="btn">Reject</button>
+              <button class="btn primary">Accept</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="tile"><h3>Hosted: Friday Strategy Night</h3><p>Enter Lobby</p></div>
+          <div class="tile"><h3>Joined: Weekend Party Games</h3><p>Waiting Approval</p></div>
+        </div>
+      </section>
+
+      <section id="lobby" class="screen">
+        <h2>6) Party Lobby + Check-in</h2>
+        <div class="grid">
+          <div class="tile"><h3>Host</h3><p>demo_host</p></div>
+          <div class="tile"><h3>Members</h3><p>2 arrived / 4 total</p></div>
+          <div class="tile"><h3>Actions</h3><button class="btn primary">Confirm Arrival</button></div>
+        </div>
+      </section>
+
+      <section id="borrow" class="screen">
+        <h2>7) Borrow Games (with Cover Images)</h2>
+        <div class="grid">
+          <div class="tile">
+            <div class="row">
+              <img class="cover" src="https://images.unsplash.com/photo-1632501641765-e568d28b0015?auto=format&fit=crop&w=100&q=80" alt="Catan" />
+              <div style="flex:1;">
+                <h3 style="margin:0;">Catan</h3>
+                <small>Strategy</small>
+              </div>
+              <button class="btn primary">Borrow</button>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="row">
+              <img class="cover" src="https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=100&q=80" alt="Codenames" />
+              <div style="flex:1;">
+                <h3 style="margin:0;">Codenames</h3>
+                <small>Party</small>
+              </div>
+              <button class="btn">Return</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
