@@ -1,4 +1,4 @@
-# Backend Draft (Supabase + Google Places)
+# Backend Draft (Supabase, Manual Location Mode)
 
 This UI is now wired to these Next.js backend endpoints:
 
@@ -13,11 +13,11 @@ This UI is now wired to these Next.js backend endpoints:
   - Updates profile fields (`name`, `surname`, `username`) and optional auth metadata (`phone`, `address`, `dateOfBirth`)
 
 - `GET /api/places/search?q=...&venueType=...`
-  - Uses Google Places API and returns only public venues
+  - Temporarily disabled, returns empty list + message to type location manually
 
 - `POST /api/parties`
-  - Input: party data + selected Google place
-  - Behavior: re-validates place from Google by `placeId`, enforces public venue, inserts into `public.parties`
+  - Input: party data + manual location text
+  - Behavior: stores manual location metadata in `public.parties.location_data`
 
 Main backend service helpers are in:
 - `lib/backend/app-service.ts`
@@ -29,8 +29,10 @@ Main backend service helpers are in:
 ## Required env vars
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 - `THAI_ID_HASH_SALT`
+
+Optional only if Places is enabled in the future:
+- `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 
 ## Login flow implemented
 1. First login must be Google OAuth.

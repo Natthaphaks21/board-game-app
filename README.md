@@ -4,7 +4,7 @@ Next.js + Supabase app with:
 - Google OAuth first-time signup flow
 - Email/password login after onboarding
 - Thai ID checksum validation with privacy-safe storage (hash + last4 only)
-- Party creation with Google Places public-location validation
+- Party creation with manual location input (Google Places currently disabled)
 
 ## 1) Run locally
 
@@ -20,9 +20,11 @@ Set these in `.env.local` and in Vercel Project Settings > Environment Variables
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 - `THAI_ID_HASH_SALT`
 - `NEXT_PUBLIC_AUTH_REDIRECT_URL` (optional, set to your exact Vercel callback URL)
+
+Optional only if you re-enable Google Places later:
+- `GOOGLE_MAPS_API_KEY` (or `Maps_API_KEY`)
 
 ## 3) Supabase setup
 
