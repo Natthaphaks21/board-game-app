@@ -12,6 +12,55 @@ function asPlan(input: unknown): Plan | null {
   return null
 }
 
+function sanitize(value: string, max: number): string {
+  return value.trim().slice(0, max)
+}
+
+async function ensureAppUserProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
+): Promise<number | null> {
+  const existing = await getCurrentAppUserId(supabase, user.id)
+  if (existing) return existing
+
+  const email = user.email ?? ""
+  const emailName = email.split("@")[0] ?? "member"
+  const rawGivenName =
+    typeof user.user_metadata?.given_name === "string"
+      ? user.user_metadata.given_name
+      : typeof user.user_metadata?.name === "string"
+        ? user.user_metadata.name.split(" ")[0]
+        : "Member"
+  const rawFamilyName =
+    typeof user.user_metadata?.family_name === "string"
+      ? user.user_metadata.family_name
+      : "User"
+
+  const username = sanitize(`${emailName}_${user.id.slice(0, 6)}`, 30)
+  const name = sanitize(rawGivenName || "Member", 30)
+  const surname = sanitize(rawFamilyName || "User", 30)
+
+  const { data: inserted, error } = await supabase
+    .from("users")
+    .insert({
+      auth_id: user.id,
+      name,
+      surname,
+      username,
+      google_auth_id: user.id,
+      thai_citizen_id_hash: `demo_hash_${user.id}`,
+      thai_citizen_id_last4: "0000",
+    })
+    .select("uid")
+    .single()
+
+  if (error || !inserted?.uid) {
+    return null
+  }
+
+  return inserted.uid
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const {
@@ -29,10 +78,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid membership plan." }, { status: 400 })
   }
 
-  const appUserId = await getCurrentAppUserId(supabase, user.id)
+  const appUserId = await ensureAppUserProfile(supabase, user)
   if (!appUserId) {
     return NextResponse.json(
-      { error: "Please complete signup first." },
+      { error: "Unable to activate membership. Please complete your profile first." },
       { status: 400 }
     )
   }

@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon, MeepleIcon } from "@/components/icons/dice-icon"
-import { getGameImageByName } from "@/lib/game-images"
 import {
   Plus,
   Search,
@@ -20,7 +19,6 @@ import {
   Sparkles,
   TrendingUp,
   Star,
-  ArrowLeft,
   Calendar,
   Loader2,
 } from "lucide-react"
@@ -138,13 +136,6 @@ export default function HomePage() {
       <MainNav />
 
       <main className="mx-auto max-w-7xl px-4 py-8">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Login
-          </Link>
-        </Button>
-
         <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground md:text-4xl">Welcome back, {displayName}!</h1>
@@ -203,18 +194,9 @@ export default function HomePage() {
               >
                 <CardContent className="p-4">
                 <div className="flex items-start justify-between">
-                    {getGameImageByName(party.games[0] ?? "") ? (
-                      <img
-                        src={getGameImageByName(party.games[0] ?? "") ?? ""}
-                        alt={party.games[0] ?? party.name}
-                        className="h-12 w-12 rounded-xl object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                        <DiceIcon className="h-7 w-7 text-primary" />
-                      </div>
-                    )}
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                      <DiceIcon className="h-7 w-7 text-primary" />
+                    </div>
                     <Badge variant="outline" className="text-xs">
                       {party.players}/{party.maxPlayers}
                     </Badge>
