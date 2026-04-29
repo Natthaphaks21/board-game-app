@@ -75,6 +75,16 @@ function relativeTime(input: string | null): string {
   return `${Math.floor(diffSec / 86400)}d ago`
 }
 
+function requesterDisplayName(request: JoinRequest): string {
+  const username = request.user.username?.trim()
+  if (username) return username
+
+  const name = request.user.name?.trim()
+  if (name && name.toLowerCase() !== "player") return name
+
+  return `User #${request.userId}`
+}
+
 export default function MyPartiesPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -235,12 +245,10 @@ export default function MyPartiesPage() {
                   >
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarFallback>
-                          {(request.user.username || request.user.name).charAt(0)}
-                        </AvatarFallback>
+                        <AvatarFallback>{requesterDisplayName(request).charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{request.user.username || request.user.name}</p>
+                        <p className="font-medium">{requesterDisplayName(request)}</p>
                         <p className="text-xs text-muted-foreground">
                           wants to join "{request.partyName}" • {relativeTime(request.requestedAt)}
                         </p>
@@ -421,9 +429,11 @@ function PartyCard({
                 Waiting for approval
               </Badge>
             ) : null}
-            <Button variant="outline" asChild>
-              <Link href={`/parties/${party.id}/waiting`}>Waiting Room</Link>
-            </Button>
+            {party.joinStatus === "pending" ? (
+              <Button variant="outline" asChild>
+                <Link href={`/parties/${party.id}/waiting`}>Waiting Room</Link>
+              </Button>
+            ) : null}
             {party.role === "host" ? (
               <Button
                 variant="destructive"

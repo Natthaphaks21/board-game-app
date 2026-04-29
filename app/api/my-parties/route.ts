@@ -33,10 +33,11 @@ interface UserRow {
   username: string | null
 }
 
-function displayName(user?: UserRow): string {
-  if (!user) return "Player"
+function displayName(user: UserRow | undefined, userId: number): string {
+  if (!user) return `User #${userId}`
   if (user.username?.trim()) return user.username
-  return `${user.name} ${user.surname}`.trim() || "Player"
+  const fallback = `${user.name} ${user.surname}`.trim()
+  return fallback || `User #${userId}`
 }
 
 export async function GET() {
@@ -189,7 +190,7 @@ export async function GET() {
           requestedAt: row.request_time,
           userId: row.user_id,
           user: {
-            name: displayName(userInfo),
+            name: displayName(userInfo, row.user_id),
             username: userInfo?.username ?? null,
           },
         }
