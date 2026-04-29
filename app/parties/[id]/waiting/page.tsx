@@ -16,6 +16,7 @@ import {
   MapPin,
   Calendar,
   Users,
+  Navigation,
   MessageCircle,
   ArrowLeft,
   Loader2,
@@ -33,15 +34,20 @@ interface JoinStatusPayload {
 }
 
 interface PartyDetail {
+  id: string
   name: string
   host: { name: string }
   location: string
   address: string
+  locationData?: {
+    googleMapsUri?: string
+  }
   date: string
   time: string
   games: string[]
   players: number
   maxPlayers: number
+  status?: "upcoming" | "ongoing" | "completed" | "cancelled"
 }
 
 interface ChatMessage {
@@ -77,6 +83,7 @@ export default function WaitingRoomPage() {
   const [chatInput, setChatInput] = useState("")
   const [isLoadingChat, setIsLoadingChat] = useState(false)
   const [isSendingChat, setIsSendingChat] = useState(false)
+  const [isLeaving, setIsLeaving] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -171,6 +178,33 @@ export default function WaitingRoomPage() {
       toast.error(error instanceof Error ? error.message : "Unable to send message")
     } finally {
       setIsSendingChat(false)
+    }
+  }
+
+  const leaveParty = async () => {
+    const partyId = params.id
+    if (!partyId) return
+
+    setIsLeaving(true)
+    try {
+      const response = await fetch(`/api/parties/${partyId}/leave`, {
+        method: "POST",
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to leave party")
+      }
+
+      toast.success("You left the party")
+      router.push("/parties/join")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to leave party")
+    } finally {
+      setIsLeaving(false)
     }
   }
 
@@ -351,6 +385,33 @@ export default function WaitingRoomPage() {
                   </div>
                 </div>
               </div>
+
+              {status !== "rejected" ? (
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  {partyDetails.locationData?.googleMapsUri ? (
+                    <Button variant="outline" className="flex-1 gap-2" asChild>
+                      <a href={partyDetails.locationData.googleMapsUri} target="_blank" rel="noreferrer">
+                        <Navigation className="h-4 w-4" />
+                        Get Directions
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="flex-1 gap-2" disabled>
+                      <Navigation className="h-4 w-4" />
+                      Get Directions
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => void leaveParty()}
+                    disabled={isLeaving || partyDetails.status === "cancelled"}
+                  >
+                    {isLeaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Leave Party
+                  </Button>
+                </div>
+              ) : null}
 
               {status === "pending" ? (
                 <div className="space-y-3 rounded-xl border border-border p-3">

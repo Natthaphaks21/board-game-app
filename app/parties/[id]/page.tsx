@@ -15,11 +15,9 @@ import {
   MapPin,
   Calendar,
   Users,
-  Clock,
   ArrowLeft,
   CheckCircle2,
   Navigation,
-  MessageCircle,
   Star,
   Gamepad2,
   Loader2,
@@ -68,7 +66,6 @@ export default function PartyDetailPage() {
   const [party, setParty] = useState<PartyDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
-  const [isSubmittingAction, setIsSubmittingAction] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -110,46 +107,6 @@ export default function PartyDetailPage() {
     if (party.joinStatus !== "accepted") return false
     return !party.hasArrived
   }, [party])
-
-  const handleCancelParty = async () => {
-    if (!party?.isHost) return
-    setIsSubmittingAction(true)
-    try {
-      const response = await fetch(`/api/parties/${params.id}/cancel`, {
-        method: "POST",
-      })
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "Unable to cancel party")
-      }
-      setParty((prev) => (prev ? { ...prev, status: "cancelled" } : prev))
-      toast.success("Party cancelled")
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to cancel party")
-    } finally {
-      setIsSubmittingAction(false)
-    }
-  }
-
-  const handleLeaveParty = async () => {
-    if (party?.isHost) return
-    setIsSubmittingAction(true)
-    try {
-      const response = await fetch(`/api/parties/${params.id}/leave`, {
-        method: "POST",
-      })
-      const payload = (await response.json().catch(() => null)) as { error?: string } | null
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "Unable to leave party")
-      }
-      toast.success("You left the party")
-      router.push("/my-parties")
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to leave party")
-    } finally {
-      setIsSubmittingAction(false)
-    }
-  }
 
   const handleArrivalConfirm = async () => {
     const partyId = params.id
@@ -373,50 +330,6 @@ export default function PartyDetailPage() {
               </Card>
             </div>
 
-            <Card className="mt-6 border-2">
-              <CardContent className="flex flex-col gap-3 p-4 md:flex-row">
-                <Button
-                  variant="outline"
-                  className="flex-1 gap-2"
-                  onClick={() => router.push(`/parties/${params.id}/lobby`)}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Message Group
-                </Button>
-                {party.locationData?.googleMapsUri ? (
-                  <Button variant="outline" className="flex-1 gap-2" asChild>
-                    <a href={party.locationData.googleMapsUri} target="_blank" rel="noreferrer">
-                      <Navigation className="h-4 w-4" />
-                      Get Directions
-                    </a>
-                  </Button>
-                ) : (
-                  <Button variant="outline" className="flex-1 gap-2" disabled>
-                    <Navigation className="h-4 w-4" />
-                    Get Directions
-                  </Button>
-                )}
-                {party.isHost ? (
-                  <Button
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={handleCancelParty}
-                    disabled={isSubmittingAction || party.status === "cancelled"}
-                  >
-                    Cancel Party
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handleLeaveParty}
-                    disabled={isSubmittingAction || party.status === "cancelled"}
-                  >
-                    Leave Party
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
           </>
         )}
       </main>
