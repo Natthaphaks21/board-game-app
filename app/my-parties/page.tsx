@@ -22,7 +22,6 @@ import {
   Crown,
   Plus,
   Gamepad2,
-  ExternalLink,
   ArrowLeft,
   Loader2,
 } from "lucide-react"
@@ -422,11 +421,8 @@ function PartyCard({
                 Waiting for approval
               </Badge>
             ) : null}
-            <Button variant="outline" asChild className="gap-2">
-              <Link href={`/parties/${party.id}`}>
-                <ExternalLink className="h-4 w-4" />
-                View Details
-              </Link>
+            <Button variant="outline" asChild>
+              <Link href={`/parties/${party.id}/waiting`}>Waiting Room</Link>
             </Button>
             {party.role === "host" ? (
               <Button

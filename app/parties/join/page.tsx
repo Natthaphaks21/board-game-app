@@ -105,6 +105,7 @@ export default function JoinPartyPage() {
   const filteredParties = useMemo(() => {
     return parties
       .filter((party) => {
+        const isNotMember = party.joinStatus !== "accepted"
         const needle = searchQuery.toLowerCase()
         const matchesSearch =
           party.id.toLowerCase().includes(needle) ||
@@ -113,7 +114,7 @@ export default function JoinPartyPage() {
           party.location.toLowerCase().includes(needle)
 
         const matchesTag = filterTag === "all" || party.tags.includes(filterTag)
-        return matchesSearch && matchesTag
+        return isNotMember && matchesSearch && matchesTag
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -248,7 +249,7 @@ export default function JoinPartyPage() {
             {filteredParties.map((party) => {
               const isFull = party.players >= party.maxPlayers
               const isPending = party.joinStatus === "pending"
-              const isAccepted = party.joinStatus === "accepted"
+              const canRequestJoin = !isFull && !isPending
 
               return (
                 <Card key={party.id} className="border-2 transition-colors hover:border-primary/50">
@@ -312,19 +313,15 @@ export default function JoinPartyPage() {
                           <Users className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{party.players}/{party.maxPlayers}</span>
                         </div>
-
-                        {isAccepted ? (
-                          <Button onClick={() => router.push(`/parties/${party.id}/lobby`)}>
-                            Enter Lobby
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleJoinRequest(party.id, party.name)}
-                            disabled={isFull || isPending}
-                          >
-                            {isFull ? "Full" : isPending ? "Requested" : "Request to Join"}
-                          </Button>
-                        )}
+                        <Button variant="outline" asChild>
+                          <Link href={`/parties/${party.id}`}>View Detail</Link>
+                        </Button>
+                        <Button
+                          onClick={() => handleJoinRequest(party.id, party.name)}
+                          disabled={!canRequestJoin}
+                        >
+                          {isFull ? "Full" : isPending ? "Requested" : "Join Party"}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
