@@ -25,6 +25,35 @@ export async function GET() {
     )
   }
 
+  let member: {
+    tier: string | null
+    subscription_date: string | null
+    subscription_expires_at: string | null
+  } | null = null
+
+  if (profile?.uid) {
+    const { data: memberRow, error: memberError } = await supabase
+      .from("members")
+      .select("tier,subscription_date,subscription_expires_at")
+      .eq("vid", profile.uid)
+      .maybeSingle()
+
+    if (memberError && memberError.code !== "PGRST116") {
+      return NextResponse.json(
+        { error: "Unable to load membership" },
+        { status: 500 }
+      )
+    }
+
+    member = memberRow
+      ? {
+          tier: memberRow.tier ?? null,
+          subscription_date: memberRow.subscription_date ?? null,
+          subscription_expires_at: memberRow.subscription_expires_at ?? null,
+        }
+      : null
+  }
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -41,5 +70,6 @@ export async function GET() {
           createdAt: profile.created_at,
         }
       : null,
+    member,
   })
 }

@@ -60,21 +60,37 @@ function resolveCoverUrl(
   return data.publicUrl || getGameImageByName(gameName ?? "")
 }
 
-async function getMemberUid(
+interface MemberRecord {
+  vid: number
+  tier: string | null
+  subscription_expires_at: string | null
+}
+
+function isMembershipActive(expiresAt: string | null): boolean {
+  if (!expiresAt) return true
+  const ts = new Date(expiresAt).getTime()
+  return Number.isFinite(ts) && ts > Date.now()
+}
+
+async function getMemberRecord(
   supabase: Awaited<ReturnType<typeof createClient>>,
   authId: string
-): Promise<number | null> {
+): Promise<MemberRecord | null> {
   const appUserUid = await getCurrentAppUserId(supabase, authId)
   if (!appUserUid) return null
 
   const { data: member } = await supabase
     .from("members")
-    .select("vid")
+    .select("vid,tier,subscription_expires_at")
     .eq("vid", appUserUid)
     .maybeSingle()
 
   if (!member?.vid) return null
-  return member.vid
+  return {
+    vid: member.vid,
+    tier: member.tier ?? null,
+    subscription_expires_at: member.subscription_expires_at ?? null,
+  }
 }
 
 export async function GET() {
@@ -87,8 +103,15 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const memberUid = await getMemberUid(supabase, user.id)
-  const borrowLimit = getBorrowLimit(user.user_metadata?.subscription_plan)
+  const memberRecord = await getMemberRecord(supabase, user.id)
+  const memberUid =
+    memberRecord && isMembershipActive(memberRecord.subscription_expires_at)
+      ? memberRecord.vid
+      : null
+  const borrowLimit =
+    memberRecord?.tier
+      ? getBorrowLimit(memberRecord.tier)
+      : getBorrowLimit(user.user_metadata?.subscription_plan)
 
   const { data: physicalRows, error } = await supabase
     .from("physical_board_games")
@@ -182,8 +205,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const memberUid = await getMemberUid(supabase, user.id)
-  const borrowLimit = getBorrowLimit(user.user_metadata?.subscription_plan)
+  const memberRecord = await getMemberRecord(supabase, user.id)
+  const memberUid =
+    memberRecord && isMembershipActive(memberRecord.subscription_expires_at)
+      ? memberRecord.vid
+      : null
+  const borrowLimit =
+    memberRecord?.tier
+      ? getBorrowLimit(memberRecord.tier)
+      : getBorrowLimit(user.user_metadata?.subscription_plan)
 
   if (!memberUid || borrowLimit <= 0) {
     return NextResponse.json(

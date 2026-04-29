@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 CREATE TABLE IF NOT EXISTS public.members (
   vid BIGINT PRIMARY KEY REFERENCES public.users(uid) ON DELETE CASCADE,
-  subscription_date TIMESTAMPTZ DEFAULT NOW()
+  subscription_date TIMESTAMPTZ DEFAULT NOW(),
+  tier VARCHAR(20),
+  subscription_expires_at TIMESTAMPTZ,
+  CONSTRAINT members_tier_check CHECK (tier IS NULL OR tier IN ('basic', 'pro', 'premium'))
 );
 
 CREATE TABLE IF NOT EXISTS public.parties (

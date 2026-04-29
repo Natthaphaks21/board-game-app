@@ -112,9 +112,28 @@ export async function POST(request: Request) {
     const { error: memberInsertError } = await supabase.from("members").insert({
       vid: appUserId,
       subscription_date: nowIso,
+      tier: plan,
+      subscription_expires_at: expiresAtIso,
     })
 
     if (memberInsertError) {
+      return NextResponse.json(
+        { error: "Unable to activate membership." },
+        { status: 400 }
+      )
+    }
+  }
+  if (existingMember?.vid) {
+    const { error: memberUpdateError } = await supabase
+      .from("members")
+      .update({
+        tier: plan,
+        subscription_date: nowIso,
+        subscription_expires_at: expiresAtIso,
+      })
+      .eq("vid", appUserId)
+
+    if (memberUpdateError) {
       return NextResponse.json(
         { error: "Unable to activate membership." },
         { status: 400 }

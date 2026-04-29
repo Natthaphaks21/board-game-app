@@ -81,6 +81,11 @@ interface MeApiResponse {
     googleAuthId: string | null
     createdAt: string | null
   } | null
+  member?: {
+    tier: string | null
+    subscription_date: string | null
+    subscription_expires_at: string | null
+  } | null
 }
 
 function getEntitlementKey(authId: string) {
@@ -196,6 +201,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const entitlements = readEntitlements(authUser.id)
+    const memberPlan = normalizePlan(payload.member?.tier)
+    const memberSubscriptionDate =
+      typeof payload.member?.subscription_date === "string"
+        ? payload.member.subscription_date
+        : undefined
+    const memberSubscriptionExpiresAt =
+      typeof payload.member?.subscription_expires_at === "string"
+        ? payload.member.subscription_expires_at
+        : undefined
     const metadataPlan = normalizePlan(authUser.metadata?.subscription_plan)
     const metadataSubscriptionDate =
       typeof authUser.metadata?.subscription_date === "string"
@@ -215,23 +229,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       metadataPlan !== "free" &&
       (isFutureIso(metadataSubscriptionExpiresAt) ||
         !metadataSubscriptionExpiresAt)
+    const memberIsActive =
+      memberPlan !== "free" &&
+      (isFutureIso(memberSubscriptionExpiresAt) || !memberSubscriptionExpiresAt)
 
-    const subscriptionPlan = metadataIsActive
-      ? metadataPlan
-      : localIsActive
-        ? localPlan
-        : "free"
+    const subscriptionPlan = memberIsActive
+      ? memberPlan
+      : metadataIsActive
+        ? metadataPlan
+        : localIsActive
+          ? localPlan
+          : "free"
 
-    const subscriptionDate = metadataIsActive
-      ? metadataSubscriptionDate
-      : localIsActive
-        ? entitlements.subscriptionDate
-        : undefined
-    const subscriptionExpiresAt = metadataIsActive
-      ? metadataSubscriptionExpiresAt
-      : localIsActive
-        ? entitlements.subscriptionExpiresAt
-        : undefined
+    const subscriptionDate = memberIsActive
+      ? memberSubscriptionDate
+      : metadataIsActive
+        ? metadataSubscriptionDate
+        : localIsActive
+          ? entitlements.subscriptionDate
+          : undefined
+    const subscriptionExpiresAt = memberIsActive
+      ? memberSubscriptionExpiresAt
+      : metadataIsActive
+        ? metadataSubscriptionExpiresAt
+        : localIsActive
+          ? entitlements.subscriptionExpiresAt
+          : undefined
     const normalizedUsedSlots = Number(entitlements.usedSlots ?? 0)
 
     const fullName = String(authUser.metadata?.name ?? "")
