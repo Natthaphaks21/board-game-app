@@ -166,17 +166,9 @@ export default function MyPartiesPage() {
         throw new Error(payload?.error ?? "Unable to cancel party")
       }
 
-      setParties((prev) =>
-        prev.map((row) =>
-          row.id === party.id
-            ? {
-                ...row,
-                status: "cancelled" as PartyStatus,
-              }
-            : row
-        )
-      )
-      toast.success(`Party "${party.name}" cancelled`)
+      setParties((prev) => prev.filter((row) => row.id !== party.id))
+      setRequests((prev) => prev.filter((request) => request.partyId !== party.id))
+      toast.success(`Party "${party.name}" cancelled and moved to history`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to cancel party")
     }

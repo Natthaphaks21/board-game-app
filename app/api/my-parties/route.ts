@@ -126,14 +126,18 @@ export async function GET() {
       status: getPartyStatus(party.appointmentTime, party.locationData),
       role: party.role,
     }))
-    .filter((party) => party.status !== "completed")
+    .filter(
+      (party) => party.status !== "completed" && party.status !== "cancelled"
+    )
     .sort(
       (a, b) =>
         new Date(a.appointmentTime).getTime() -
         new Date(b.appointmentTime).getTime()
     )
 
-  const hostedIds = (hostedRows ?? []).map((party) => party.pid)
+  const hostedIds = parties
+    .filter((party) => party.role === "host")
+    .map((party) => Number(party.id))
 
   let requests: Array<{
     id: string
@@ -170,8 +174,10 @@ export async function GET() {
       }
 
       const partyNames = new Map<number, string>()
-      for (const row of (hostedRows ?? []) as PartyRow[]) {
-        partyNames.set(row.pid, row.party_name)
+      for (const party of parties) {
+        if (party.role === "host") {
+          partyNames.set(Number(party.id), party.name)
+        }
       }
 
       requests = (pendingRows as PendingJoinRow[]).map((row) => {
