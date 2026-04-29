@@ -92,21 +92,34 @@ export async function POST(request: Request) {
     now.getTime() + 30 * 24 * 60 * 60 * 1000
   ).toISOString()
 
-  const { error: memberError } = await supabase
+  // Demo-safe membership write:
+  // avoid `upsert` because it can require UPDATE policy when row already exists.
+  // We only need to ensure a row exists.
+  const { data: existingMember, error: memberLookupError } = await supabase
     .from("members")
-    .upsert(
-      {
-        vid: appUserId,
-        subscription_date: nowIso,
-      },
-      { onConflict: "vid" }
-    )
+    .select("vid")
+    .eq("vid", appUserId)
+    .maybeSingle()
 
-  if (memberError) {
+  if (memberLookupError && memberLookupError.code !== "PGRST116") {
     return NextResponse.json(
       { error: "Unable to activate membership." },
       { status: 400 }
     )
+  }
+
+  if (!existingMember?.vid) {
+    const { error: memberInsertError } = await supabase.from("members").insert({
+      vid: appUserId,
+      subscription_date: nowIso,
+    })
+
+    if (memberInsertError) {
+      return NextResponse.json(
+        { error: "Unable to activate membership." },
+        { status: 400 }
+      )
+    }
   }
 
   const { error: authError } = await supabase.auth.updateUser({
