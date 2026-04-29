@@ -451,7 +451,7 @@ export default function OnboardingPage() {
 
         {/* Security Notice */}
         <p className="mt-6 max-w-md text-center text-xs text-muted-foreground">
-          Your information is securely handled under Thailand&apos;s PDPA. Just Board does not persist
+          Your information is securely handled under Thailand&apos;s PDPA. JustBoard does not persist
           full Thai ID card numbers.
         </p>
       </div>

@@ -361,7 +361,7 @@ export default function ProfilePage() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Sign out of Just Board?</AlertDialogTitle>
+                    <AlertDialogTitle>Sign out of JustBoard?</AlertDialogTitle>
                     <AlertDialogDescription>
                       You will need to sign in again to access your account.
                     </AlertDialogDescription>

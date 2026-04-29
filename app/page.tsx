@@ -87,7 +87,7 @@ export default function LoginPage() {
             <DiceIcon className="h-12 w-12 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            Just Board
+            JustBoard
           </h1>
           <p className="mt-2 text-base text-muted-foreground sm:text-lg">
             Find your game night crew

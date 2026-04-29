@@ -16,7 +16,7 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
-  title: 'Just Board - Find Your Game Night',
+  title: 'JustBoard - Find Your Game Night',
   description: 'Create parties, join games, and connect with board game enthusiasts',
   generator: 'v0.app',
   icons: {
