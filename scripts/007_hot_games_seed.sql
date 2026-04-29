@@ -10,11 +10,11 @@ ADD COLUMN IF NOT EXISTS cover_image_path TEXT;
 
 INSERT INTO public.board_game_catalogue (catalogue_id, game_name, category, cover_image_path)
 VALUES
-  (9211, 'Werewolf', 'Party', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80'),
-  (9212, 'Insider', 'Party', 'https://images.unsplash.com/photo-1605870445919-838d190e8e1b?auto=format&fit=crop&w=400&q=80'),
-  (9213, 'Dixit', 'Storytelling', 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80'),
-  (9214, 'Exploding Kittens', 'Party', 'https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=400&q=80'),
-  (9215, 'Coup', 'Bluffing', 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=400&q=80')
+  (9211, 'Werewolf', 'Party', 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f3/Ultimate_Werewold_board_game_cover_art_2017.png/330px-Ultimate_Werewold_board_game_cover_art_2017.png'),
+  (9212, 'Insider', 'Party', 'https://oinkgames.com/images/flatview/insider_en_front.png'),
+  (9213, 'Dixit', 'Storytelling', 'https://upload.wikimedia.org/wikipedia/en/7/7b/Dixitgame.jpg'),
+  (9214, 'Exploding Kittens', 'Party', 'https://upload.wikimedia.org/wikipedia/en/a/a6/Exploding_Kittens.png'),
+  (9215, 'Coup', 'Bluffing', 'https://indieboardsandcards.com/wp-content/uploads/2019/10/Untitled-design-4.png')
 ON CONFLICT (catalogue_id) DO UPDATE
 SET
   game_name = EXCLUDED.game_name,

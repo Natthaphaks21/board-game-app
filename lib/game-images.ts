@@ -1,30 +1,30 @@
 const GAME_IMAGE_BY_NAME: Record<string, string> = {
   catan:
-    "https://images.unsplash.com/photo-1632501641765-e568d28b0015?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/a/a3/Catan-2015-boxart.jpg",
   "ticket to ride":
-    "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/9/92/Ticket_to_Ride_Board_Game_Box_EN.jpg",
   codenames:
-    "https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Codenames_board_game.jpg/330px-Codenames_board_game.jpg",
   wingspan:
-    "https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/c/c3/3d-wingspan-768x752.png",
   azul:
-    "https://images.unsplash.com/photo-1606053896989-1ff2f7976db5?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/2/23/Picture_of_Azul_game_box.jpg",
   pandemic:
-    "https://images.unsplash.com/photo-1603732551658-5fabbafa84eb?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/3/36/Pandemic_game.jpg",
   splendor:
-    "https://images.unsplash.com/photo-1560179406-1c6c60e0dc76?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/2/2e/BoardGameSplendorLogoFairUse.jpg",
   carcassonne:
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/5/5e/Carcassonne-game.jpg",
   werewolf:
-    "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/thumb/f/f3/Ultimate_Werewold_board_game_cover_art_2017.png/330px-Ultimate_Werewold_board_game_cover_art_2017.png",
   insider:
-    "https://images.unsplash.com/photo-1605870445919-838d190e8e1b?auto=format&fit=crop&w=160&q=80",
+    "https://oinkgames.com/images/flatview/insider_en_front.png",
   dixit:
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/7/7b/Dixitgame.jpg",
   "exploding kittens":
-    "https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=160&q=80",
+    "https://upload.wikimedia.org/wikipedia/en/a/a6/Exploding_Kittens.png",
   coup:
-    "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=160&q=80",
+    "https://indieboardsandcards.com/wp-content/uploads/2019/10/Untitled-design-4.png",
 }
 
 export function getGameImageByName(name: string): string | null {

@@ -69,14 +69,14 @@ ON CONFLICT (vid) DO NOTHING;
 -- ---------------------------------------------------------------------------
 INSERT INTO public.board_game_catalogue (catalogue_id, game_name, category, cover_image_path)
 VALUES
-  (9201, 'Catan', 'Strategy', 'https://images.unsplash.com/photo-1632501641765-e568d28b0015?auto=format&fit=crop&w=400&q=80'),
-  (9202, 'Ticket to Ride', 'Family', 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=400&q=80'),
-  (9203, 'Codenames', 'Party', 'https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=400&q=80'),
-  (9204, 'Wingspan', 'Engine Building', 'https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=400&q=80'),
-  (9205, 'Azul', 'Abstract', 'https://images.unsplash.com/photo-1606053896989-1ff2f7976db5?auto=format&fit=crop&w=400&q=80'),
-  (9206, 'Pandemic', 'Cooperative', 'https://images.unsplash.com/photo-1603732551658-5fabbafa84eb?auto=format&fit=crop&w=400&q=80'),
-  (9207, 'Splendor', 'Engine Building', 'https://images.unsplash.com/photo-1560179406-1c6c60e0dc76?auto=format&fit=crop&w=400&q=80'),
-  (9208, 'Carcassonne', 'Tile Placement', 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80')
+  (9201, 'Catan', 'Strategy', 'https://upload.wikimedia.org/wikipedia/en/a/a3/Catan-2015-boxart.jpg'),
+  (9202, 'Ticket to Ride', 'Family', 'https://upload.wikimedia.org/wikipedia/en/9/92/Ticket_to_Ride_Board_Game_Box_EN.jpg'),
+  (9203, 'Codenames', 'Party', 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Codenames_board_game.jpg/330px-Codenames_board_game.jpg'),
+  (9204, 'Wingspan', 'Engine Building', 'https://upload.wikimedia.org/wikipedia/en/c/c3/3d-wingspan-768x752.png'),
+  (9205, 'Azul', 'Abstract', 'https://upload.wikimedia.org/wikipedia/en/2/23/Picture_of_Azul_game_box.jpg'),
+  (9206, 'Pandemic', 'Cooperative', 'https://upload.wikimedia.org/wikipedia/en/3/36/Pandemic_game.jpg'),
+  (9207, 'Splendor', 'Engine Building', 'https://upload.wikimedia.org/wikipedia/en/2/2e/BoardGameSplendorLogoFairUse.jpg'),
+  (9208, 'Carcassonne', 'Tile Placement', 'https://upload.wikimedia.org/wikipedia/en/5/5e/Carcassonne-game.jpg')
 ON CONFLICT (catalogue_id) DO UPDATE
 SET
   game_name = EXCLUDED.game_name,

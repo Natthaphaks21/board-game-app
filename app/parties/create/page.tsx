@@ -36,10 +36,10 @@ import {
 import { toast } from 'sonner'
 
 const fallbackGames = [
-  { id: 'fallback-1', name: 'Catan', imageUrl: 'https://images.unsplash.com/photo-1632501641765-e568d28b0015?auto=format&fit=crop&w=200&q=80' },
-  { id: 'fallback-2', name: 'Ticket to Ride', imageUrl: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=200&q=80' },
-  { id: 'fallback-3', name: 'Codenames', imageUrl: 'https://images.unsplash.com/photo-1606503153255-59d8b8b5b7f9?auto=format&fit=crop&w=200&q=80' },
-  { id: 'fallback-4', name: 'Wingspan', imageUrl: 'https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=200&q=80' },
+  { id: 'fallback-1', name: 'Catan', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/a/a3/Catan-2015-boxart.jpg' },
+  { id: 'fallback-2', name: 'Ticket to Ride', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/9/92/Ticket_to_Ride_Board_Game_Box_EN.jpg' },
+  { id: 'fallback-3', name: 'Codenames', imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Codenames_board_game.jpg/330px-Codenames_board_game.jpg' },
+  { id: 'fallback-4', name: 'Wingspan', imageUrl: 'https://upload.wikimedia.org/wikipedia/en/c/c3/3d-wingspan-768x752.png' },
 ]
 
 const venueTypes = [
