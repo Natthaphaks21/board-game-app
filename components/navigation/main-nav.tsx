@@ -121,7 +121,7 @@ export function MainNav() {
                 <DiceIcon className="h-6 w-6 text-primary-foreground" />
               </div>
               <span className="hidden text-xl font-bold text-foreground sm:block">
-                BoardBuddies
+                Just Board
               </span>
             </Link>
 
@@ -304,7 +304,7 @@ export function MainNav() {
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign out of BoardBuddies?</AlertDialogTitle>
+            <AlertDialogTitle>Sign out of Just Board?</AlertDialogTitle>
             <AlertDialogDescription>
               This will clear your local session cache on this device and return you to login.
             </AlertDialogDescription>

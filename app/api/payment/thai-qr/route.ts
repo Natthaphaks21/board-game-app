@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         amount,
         currency: 'THB',
         expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes expiry
-        merchantName: 'BoardBuddies Co., Ltd.',
+        merchantName: 'Just Board Co., Ltd.',
         instructions: [
           'Open your mobile banking app',
           'Select "Scan QR" or "PromptPay"',
