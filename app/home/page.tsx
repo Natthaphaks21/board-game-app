@@ -27,6 +27,7 @@ import { toast } from "sonner"
 interface Party {
   id: string
   name: string
+  appointmentTime: string
   date: string
   time: string
   location: string
@@ -38,6 +39,7 @@ interface Party {
     name: string
     rating: number
   }
+  joinStatus: "pending" | "accepted" | "rejected" | "none"
 }
 
 interface MyPartiesPayload {
@@ -61,6 +63,7 @@ export default function HomePage() {
     joined: 0,
     history: 0,
   })
+  const [joiningPartyId, setJoiningPartyId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) {
@@ -127,6 +130,48 @@ export default function HomePage() {
       }))
   }, [parties])
 
+  const nearbyParties = useMemo(
+    () =>
+      parties
+        .filter((party) => party.joinStatus !== "accepted")
+        .slice(0, 6),
+    [parties]
+  )
+
+  const handleJoinFromHome = async (party: Party) => {
+    try {
+      setJoiningPartyId(party.id)
+      const response = await fetch(`/api/parties/${party.id}/join`, {
+        method: "POST",
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; status?: Party["joinStatus"] }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to send join request")
+      }
+
+      setParties((prev) =>
+        prev.map((item) =>
+          item.id === party.id
+            ? {
+                ...item,
+                joinStatus: payload?.status ?? "pending",
+              }
+            : item
+        )
+      )
+
+      toast.success(`Join request sent for "${party.name}"`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to send join request")
+    } finally {
+      setJoiningPartyId(null)
+    }
+  }
+
   if (!user) return null
 
   const displayName = user.username || user.name || "Player"
@@ -167,7 +212,7 @@ export default function HomePage() {
               <Sparkles className="h-5 w-5 text-primary" />
               Nearby Parties
             </h2>
-            <p className="text-sm text-muted-foreground">Live suggestions from Supabase</p>
+            <p className="text-sm text-muted-foreground">View details or send a join request instantly</p>
           </div>
           <Link href="/parties/join">
             <Button variant="ghost" size="sm" className="gap-1">
@@ -186,11 +231,10 @@ export default function HomePage() {
           </Card>
         ) : (
           <div className="mb-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {parties.slice(0, 6).map((party) => (
+            {nearbyParties.map((party) => (
               <Card
                 key={party.id}
-                className="cursor-pointer border-2 transition-all hover:border-primary/50 hover:shadow-lg"
-                onClick={() => router.push(`/parties/${party.id}`)}
+                className="border-2 transition-all hover:border-primary/50 hover:shadow-lg"
               >
                 <CardContent className="p-4">
                 <div className="flex items-start justify-between">
@@ -235,9 +279,24 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  <Button className="mt-4 w-full" size="sm">
-                    View Party
-                  </Button>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/parties/${party.id}`)}>
+                      View Detail
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={party.players >= party.maxPlayers || party.joinStatus === "pending" || joiningPartyId === party.id}
+                      onClick={() => handleJoinFromHome(party)}
+                    >
+                      {joiningPartyId === party.id
+                        ? "Sending..."
+                        : party.players >= party.maxPlayers
+                          ? "Full"
+                          : party.joinStatus === "pending"
+                            ? "Requested"
+                            : "Join Party"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

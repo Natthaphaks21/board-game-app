@@ -20,6 +20,7 @@ import {
   Navigation,
   Star,
   Gamepad2,
+  Clock,
   Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -66,6 +67,7 @@ export default function PartyDetailPage() {
   const [party, setParty] = useState<PartyDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCheckingIn, setIsCheckingIn] = useState(false)
+  const [isJoining, setIsJoining] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -149,6 +151,41 @@ export default function PartyDetailPage() {
     }
   }
 
+  const handleJoinParty = async () => {
+    const partyId = params.id
+    if (!partyId || !party) return
+
+    setIsJoining(true)
+    try {
+      const response = await fetch(`/api/parties/${partyId}/join`, {
+        method: "POST",
+      })
+
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; status?: PartyDetail["joinStatus"] }
+        | null
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to send join request")
+      }
+
+      setParty((prev) =>
+        prev
+          ? {
+              ...prev,
+              joinStatus: payload?.status ?? "pending",
+            }
+          : prev
+      )
+
+      toast.success("Join request sent to host")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to send join request")
+    } finally {
+      setIsJoining(false)
+    }
+  }
+
   if (!user) return null
 
   return (
@@ -205,14 +242,17 @@ export default function PartyDetailPage() {
                   </div>
 
                   <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 p-4">
-                    {party.hasArrived || party.isHost ? (
+                    {party.isHost ? (
                       <>
                         <CheckCircle2 className="h-8 w-8 text-primary" />
-                        <span className="text-sm font-medium text-primary">
-                          {party.isHost ? "Host" : "Arrival Confirmed"}
-                        </span>
+                        <span className="text-sm font-medium text-primary">Host</span>
                       </>
-                    ) : (
+                    ) : party.joinStatus === "accepted" && party.hasArrived ? (
+                      <>
+                        <CheckCircle2 className="h-8 w-8 text-primary" />
+                        <span className="text-sm font-medium text-primary">Arrival Confirmed</span>
+                      </>
+                    ) : party.joinStatus === "accepted" ? (
                       <>
                         <p className="text-sm text-muted-foreground">At the venue?</p>
                         <Button onClick={handleArrivalConfirm} className="gap-2" disabled={!canCheckIn || isCheckingIn}>
@@ -222,6 +262,25 @@ export default function PartyDetailPage() {
                             <Navigation className="h-4 w-4" />
                           )}
                           Confirm Arrival
+                        </Button>
+                      </>
+                    ) : party.joinStatus === "pending" ? (
+                      <>
+                        <Clock className="h-8 w-8 text-primary" />
+                        <span className="text-sm font-medium text-primary">Join Request Sent</span>
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/parties/${party.id}/waiting`)}>
+                          Open Waiting Room
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">Want to join this party?</p>
+                        <Button onClick={handleJoinParty} disabled={isJoining || party.players >= party.maxPlayers || party.status === "cancelled"}>
+                          {isJoining
+                            ? "Sending..."
+                            : party.players >= party.maxPlayers
+                              ? "Party Full"
+                              : "Join Party"}
                         </Button>
                       </>
                     )}
