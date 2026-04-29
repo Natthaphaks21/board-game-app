@@ -56,16 +56,6 @@ export async function POST(
     )
   }
 
-  const partyStart = new Date(party.appointment_time).getTime()
-  const nowTs = Date.now()
-  const diffMinutes = Math.abs(nowTs - partyStart) / (60 * 1000)
-  if (!Number.isFinite(partyStart) || diffMinutes > 15) {
-    return NextResponse.json(
-      { error: "Arrival confirmation is only available within 15 minutes before or after meeting time." },
-      { status: 400 }
-    )
-  }
-
   const requestedUserId =
     typeof payload?.userId === "number" && Number.isFinite(payload.userId)
       ? payload.userId

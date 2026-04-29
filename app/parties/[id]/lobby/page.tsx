@@ -195,24 +195,12 @@ export default function PartyLobbyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, router, user])
 
-  const checkInWindow = useMemo(() => {
-    if (!party) return { withinWindow: false, minutesFromStart: 0 }
-    const appointmentTs = new Date(party.appointmentTime).getTime()
-    if (!Number.isFinite(appointmentTs)) return { withinWindow: false, minutesFromStart: 0 }
-    const minutesFromStart = Math.floor((Date.now() - appointmentTs) / (60 * 1000))
-    return {
-      withinWindow: Math.abs(minutesFromStart) <= 15,
-      minutesFromStart,
-    }
-  }, [party])
-
   const canCheckIn = useMemo(() => {
     if (!party) return false
     if (party.status === "cancelled") return false
     if (party.isHost) return false
-    if (!checkInWindow.withinWindow) return false
     return !party.hasArrived
-  }, [checkInWindow.withinWindow, party])
+  }, [party])
 
   const handleArrivalConfirm = async () => {
     const partyId = params.id
@@ -517,12 +505,10 @@ export default function PartyLobbyPage() {
                     </CardTitle>
                     <CardDescription>
                       {party.isHost
-                        ? checkInWindow.withinWindow
-                          ? "Check-in window is open (±15 minutes). You can confirm member status below."
-                          : "Check-in window is closed. Host can confirm arrivals only within ±15 minutes of appointment."
+                        ? "Host can confirm member status below."
                         : party.hasArrived
                           ? "You have confirmed your arrival."
-                          : "Confirm when you arrive at the location (within ±15 minutes of appointment)."}
+                          : "Confirm when you arrive at the location."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -614,11 +600,7 @@ export default function PartyLobbyPage() {
                     </CardTitle>
                     <CardDescription>
                       {party.members.filter((member) => member.arrived).length} arrived
-                      {party.isHost
-                        ? checkInWindow.withinWindow
-                          ? " • Host can mark member status now."
-                          : " • Host can mark member status only within ±15 minutes."
-                        : ""}
+                      {party.isHost ? " • Host can mark member status now." : ""}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -645,7 +627,7 @@ export default function PartyLobbyPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => openArrivalDecisionModal(member, true)}
-                                    disabled={isSubmitting || !checkInWindow.withinWindow || party.status === "cancelled"}
+                                    disabled={isSubmitting || party.status === "cancelled"}
                                   >
                                     Mark Arrived
                                   </Button>
@@ -653,7 +635,7 @@ export default function PartyLobbyPage() {
                                     size="sm"
                                     variant="destructive"
                                     onClick={() => openArrivalDecisionModal(member, false)}
-                                    disabled={isSubmitting || !checkInWindow.withinWindow || party.status === "cancelled"}
+                                    disabled={isSubmitting || party.status === "cancelled"}
                                   >
                                     Mark No-show
                                   </Button>
