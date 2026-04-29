@@ -115,7 +115,7 @@ export async function GET() {
           ? false
           : isHost
           ? true
-          : Boolean(selfJoin?.confirmed_arrival || selfJoin?.checked_in_at),
+          : Boolean(selfJoin?.confirmed_arrival),
         joinStatus: selfJoin?.status ?? party.joinStatus,
       }
     })

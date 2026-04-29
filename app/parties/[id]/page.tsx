@@ -44,6 +44,7 @@ interface PartyDetail {
   address: string
   date: string
   time: string
+  appointmentTime: string
   description: string
   games: string[]
   tags: string[]
@@ -104,10 +105,24 @@ export default function PartyDetailPage() {
 
   const canCheckIn = useMemo(() => {
     if (!party) return false
+    const appointmentTs = new Date(party.appointmentTime).getTime()
+    const withinWindow =
+      Number.isFinite(appointmentTs) &&
+      Math.abs(Date.now() - appointmentTs) <= 15 * 60 * 1000
+    if (!withinWindow) return false
     if (party.status === "cancelled") return false
     if (party.isHost) return false
     if (party.joinStatus !== "accepted") return false
     return !party.hasArrived
+  }, [party])
+
+  const isWithinCheckInWindow = useMemo(() => {
+    if (!party) return false
+    const appointmentTs = new Date(party.appointmentTime).getTime()
+    return (
+      Number.isFinite(appointmentTs) &&
+      Math.abs(Date.now() - appointmentTs) <= 15 * 60 * 1000
+    )
   }, [party])
 
   const handleArrivalConfirm = async () => {
@@ -254,7 +269,11 @@ export default function PartyDetailPage() {
                       </>
                     ) : party.joinStatus === "accepted" ? (
                       <>
-                        <p className="text-sm text-muted-foreground">At the venue?</p>
+                        <p className="text-sm text-muted-foreground">
+                          {isWithinCheckInWindow
+                            ? "At the venue?"
+                            : "Arrival confirmation is only available within ±15 minutes of appointment time."}
+                        </p>
                         <Button onClick={handleArrivalConfirm} className="gap-2" disabled={!canCheckIn || isCheckingIn}>
                           {isCheckingIn ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

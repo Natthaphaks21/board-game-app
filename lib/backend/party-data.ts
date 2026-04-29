@@ -300,7 +300,7 @@ export async function mapPartiesToList(
       maxPlayers,
       players: 1 + acceptedJoins.length,
       joinStatus,
-      hasArrived: Boolean(viewerJoin?.confirmed_arrival || viewerJoin?.checked_in_at),
+      hasArrived: Boolean(viewerJoin?.confirmed_arrival),
       role,
     } satisfies PartyListItem
   })
@@ -351,7 +351,7 @@ export async function mapPartyToDetail(
           name: getDisplayName(user),
           username: user?.username ?? null,
           role: "player" as const,
-          arrived: Boolean(join.confirmed_arrival || join.checked_in_at),
+          arrived: Boolean(join.confirmed_arrival),
           joinedAt: join.request_time,
         }
       }),

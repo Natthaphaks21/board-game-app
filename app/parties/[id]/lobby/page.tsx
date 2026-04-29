@@ -9,6 +9,16 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { MainNav } from "@/components/navigation/main-nav"
 import { useAuth } from "@/contexts/auth-context"
 import { DiceIcon } from "@/components/icons/dice-icon"
@@ -85,6 +95,12 @@ interface ChatMessage {
   isMine: boolean
 }
 
+interface ArrivalDecision {
+  memberId: number
+  memberName: string
+  arrived: boolean
+}
+
 function relativeTime(input: string | null): string {
   if (!input) return "just now"
   const ts = new Date(input).getTime()
@@ -111,6 +127,7 @@ export default function PartyLobbyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingChat, setIsSendingChat] = useState(false)
   const [isChatExpanded, setIsChatExpanded] = useState(false)
+  const [arrivalDecision, setArrivalDecision] = useState<ArrivalDecision | null>(null)
 
   const loadParty = async () => {
     const partyId = params.id
@@ -178,12 +195,24 @@ export default function PartyLobbyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, router, user])
 
+  const checkInWindow = useMemo(() => {
+    if (!party) return { withinWindow: false, minutesFromStart: 0 }
+    const appointmentTs = new Date(party.appointmentTime).getTime()
+    if (!Number.isFinite(appointmentTs)) return { withinWindow: false, minutesFromStart: 0 }
+    const minutesFromStart = Math.floor((Date.now() - appointmentTs) / (60 * 1000))
+    return {
+      withinWindow: Math.abs(minutesFromStart) <= 15,
+      minutesFromStart,
+    }
+  }, [party])
+
   const canCheckIn = useMemo(() => {
     if (!party) return false
     if (party.status === "cancelled") return false
     if (party.isHost) return false
+    if (!checkInWindow.withinWindow) return false
     return !party.hasArrived
-  }, [party])
+  }, [checkInWindow.withinWindow, party])
 
   const handleArrivalConfirm = async () => {
     const partyId = params.id
@@ -213,7 +242,7 @@ export default function PartyLobbyPage() {
     }
   }
 
-  const handleConfirmMemberArrival = async (memberId: number) => {
+  const handleConfirmMemberArrival = async (memberId: number, arrived: boolean) => {
     const partyId = params.id
     if (!partyId) return
 
@@ -222,23 +251,37 @@ export default function PartyLobbyPage() {
       const response = await fetch(`/api/parties/${partyId}/check-in`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: memberId }),
+        body: JSON.stringify({ userId: memberId, arrived }),
       })
 
       const payload = (await response.json().catch(() => null)) as
         | { error?: string }
         | null
       if (!response.ok) {
-        throw new Error(payload?.error ?? "Unable to confirm member arrival")
+        throw new Error(payload?.error ?? "Unable to update member arrival status")
       }
 
-      toast.success("Member arrival confirmed")
+      toast.success(arrived ? "Member marked as arrived" : "Member marked as no-show")
       await loadParty()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to confirm member arrival")
+      toast.error(error instanceof Error ? error.message : "Unable to update member arrival status")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const openArrivalDecisionModal = (member: Member, arrived: boolean) => {
+    setArrivalDecision({
+      memberId: member.uid,
+      memberName: member.username || member.name,
+      arrived,
+    })
+  }
+
+  const handleConfirmArrivalDecision = async () => {
+    if (!arrivalDecision) return
+    await handleConfirmMemberArrival(arrivalDecision.memberId, arrivalDecision.arrived)
+    setArrivalDecision(null)
   }
 
   const handleRequest = async (userId: number, status: "accepted" | "rejected") => {
@@ -474,10 +517,12 @@ export default function PartyLobbyPage() {
                     </CardTitle>
                     <CardDescription>
                       {party.isHost
-                        ? "You can confirm member arrivals below."
+                        ? checkInWindow.withinWindow
+                          ? "Check-in window is open (±15 minutes). You can confirm member status below."
+                          : "Check-in window is closed. Host can confirm arrivals only within ±15 minutes of appointment."
                         : party.hasArrived
                           ? "You have confirmed your arrival."
-                          : "Confirm when you arrive at the location."}
+                          : "Confirm when you arrive at the location (within ±15 minutes of appointment)."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -569,7 +614,11 @@ export default function PartyLobbyPage() {
                     </CardTitle>
                     <CardDescription>
                       {party.members.filter((member) => member.arrived).length} arrived
-                      {party.isHost ? " • Host can mark members as arrived." : ""}
+                      {party.isHost
+                        ? checkInWindow.withinWindow
+                          ? " • Host can mark member status now."
+                          : " • Host can mark member status only within ±15 minutes."
+                        : ""}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -591,14 +640,24 @@ export default function PartyLobbyPage() {
                             <div className="mt-1 flex items-center gap-2">
                               <Badge variant="secondary">Not arrived</Badge>
                               {party.isHost && member.role !== "host" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleConfirmMemberArrival(member.uid)}
-                                  disabled={isSubmitting}
-                                >
-                                  Mark Arrived
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openArrivalDecisionModal(member, true)}
+                                    disabled={isSubmitting || !checkInWindow.withinWindow || party.status === "cancelled"}
+                                  >
+                                    Mark Arrived
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => openArrivalDecisionModal(member, false)}
+                                    disabled={isSubmitting || !checkInWindow.withinWindow || party.status === "cancelled"}
+                                  >
+                                    Mark No-show
+                                  </Button>
+                                </>
                               ) : null}
                             </div>
                           )}
@@ -718,6 +777,25 @@ export default function PartyLobbyPage() {
                 </Card>
               </div>
             </div>
+            <AlertDialog open={Boolean(arrivalDecision)} onOpenChange={(open) => !open && setArrivalDecision(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm arrival status update?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {arrivalDecision
+                      ? `Set ${arrivalDecision.memberName} as ${arrivalDecision.arrived ? "Arrived" : "No-show"} for this party.`
+                      : "Confirm member status update."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => void handleConfirmArrivalDecision()} disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Confirm"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             {isChatExpanded ? (
               <button
                 type="button"

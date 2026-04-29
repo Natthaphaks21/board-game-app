@@ -4,6 +4,7 @@ import { getCurrentAppUserId, isPartyCancelled } from "@/lib/backend/party-data"
 
 interface CheckInPayload {
   userId?: number
+  arrived?: boolean
 }
 
 export async function POST(
@@ -56,9 +57,11 @@ export async function POST(
   }
 
   const partyStart = new Date(party.appointment_time).getTime()
-  if (partyStart > Date.now()) {
+  const nowTs = Date.now()
+  const diffMinutes = Math.abs(nowTs - partyStart) / (60 * 1000)
+  if (!Number.isFinite(partyStart) || diffMinutes > 15) {
     return NextResponse.json(
-      { error: "Check-in opens when the meeting time starts." },
+      { error: "Arrival confirmation is only available within 15 minutes before or after meeting time." },
       { status: 400 }
     )
   }
@@ -69,6 +72,7 @@ export async function POST(
       : currentAppUserId
 
   const isHost = party.host_id === currentAppUserId
+  const arrived = payload?.arrived !== false
 
   if (requestedUserId !== currentAppUserId && !isHost) {
     return NextResponse.json(
@@ -81,12 +85,33 @@ export async function POST(
     return NextResponse.json({ success: true, role: "host" })
   }
 
+  const { data: targetJoin } = await supabase
+    .from("party_joins")
+    .select("status")
+    .eq("party_id", partyId)
+    .eq("user_id", requestedUserId)
+    .maybeSingle()
+
+  if (!targetJoin || targetJoin.status !== "accepted") {
+    return NextResponse.json(
+      { error: "Only accepted members can have arrival status updated." },
+      { status: 400 }
+    )
+  }
+
+  if (!arrived && !isHost) {
+    return NextResponse.json(
+      { error: "Only host can mark a member as not arrived." },
+      { status: 403 }
+    )
+  }
+
   const nowIso = new Date().toISOString()
 
   const { data: updated, error: updateError } = await supabase
     .from("party_joins")
     .update({
-      confirmed_arrival: true,
+      confirmed_arrival: arrived,
       checked_in_at: nowIso,
     })
     .eq("party_id", partyId)
