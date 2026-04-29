@@ -619,13 +619,14 @@ export default function PartyLobbyPage() {
                               Arrived
                             </Badge>
                           ) : (
-                            <div className="mt-1 flex items-center gap-2">
-                              <Badge variant="secondary">Not arrived</Badge>
+                            <div className="mt-1 space-y-2">
+                              <Badge variant="secondary" className="w-fit">Not arrived</Badge>
                               {party.isHost && member.role !== "host" ? (
-                                <>
+                                <div className="flex flex-wrap gap-2">
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    className="flex-1 sm:flex-none"
                                     onClick={() => openArrivalDecisionModal(member, true)}
                                     disabled={isSubmitting || party.status === "cancelled"}
                                   >
@@ -634,12 +635,13 @@ export default function PartyLobbyPage() {
                                   <Button
                                     size="sm"
                                     variant="destructive"
+                                    className="flex-1 sm:flex-none"
                                     onClick={() => openArrivalDecisionModal(member, false)}
                                     disabled={isSubmitting || party.status === "cancelled"}
                                   >
-                                    Mark No-show
+                                    No-show
                                   </Button>
-                                </>
+                                </div>
                               ) : null}
                             </div>
                           )}
